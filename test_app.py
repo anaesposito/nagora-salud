@@ -1,10 +1,12 @@
 import json
+import os
 import tempfile
 import threading
 import unittest
 from http.client import HTTPConnection
 from pathlib import Path
 from uuid import uuid4
+from unittest.mock import patch
 
 from domain import today, money, connect
 from server import make_server
@@ -34,7 +36,8 @@ class NagoraTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.path = Path(self.tmp.name)/'test.sqlite'
-        self.server = make_server(self.path,port=0)
+        with patch.dict(os.environ, {'NAGORA_DEMO_ONLY':'0', 'RENDER':'false', 'RENDER_EXTERNAL_URL':'', 'NAGORA_ORIGIN':''}):
+            self.server = make_server(self.path,port=0)
         self.thread = threading.Thread(target=self.server.serve_forever,daemon=True)
         self.thread.start()
         self.client = Client(self.server)

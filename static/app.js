@@ -18,7 +18,25 @@ const pesos = cents => {
 const amountInput = cents => String(BigInt(cents)/100n) + ',' + String(BigInt(cents)%100n).padStart(2,'0');
 const sum = (rows,key) => rows.reduce((total,row)=>total+BigInt(row[key]),0n);
 const dateText = value => value ? value.split('-').reverse().join('/') : '';
-const brand = '<div class="brand"><b aria-hidden="true">N</b><div>Nagora Salud<small>Es momento de gestionar. · Logo temporal</small></div></div>';
+const shapes = {
+  coins:'<ellipse cx="15" cy="5" rx="6" ry="3"/><path d="M9 5v5m12-5v12c0 2-3 3-6 3m0-6c3 0 6-1 6-3"/><ellipse cx="8" cy="13" rx="5" ry="3"/><path d="M3 13v6c0 4 10 4 10 0v-6"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  wallet:'<rect x="3" y="6" width="18" height="14" rx="3"/><path d="m5 6 12-3v3m4 5h-6a2 2 0 0 0 0 4h6"/>',
+  plus:'<circle cx="12" cy="12" r="9"/><path d="M7 12h10m-5-5v10"/>',
+  bank:'<path d="m3 9 9-6 9 6H3zm2 12h14M6 10v10m6-10v10m6-10v10"/>',
+  shield:'<path d="M12 3 4 6v5c0 5 3 8 8 10 5-2 8-5 8-10V6zM9 11h6m-3-3v6"/>',
+  people:'<circle cx="9" cy="8" r="3"/><path d="M3 20v-3a6 6 0 0 1 12 0v3zm13-15a3 3 0 0 1 0 6m2 3a4 4 0 0 1 3 4"/>',
+  more:'<circle cx="12" cy="12" r="9"/><path d="M8 12h.01m4 0h.01m4 0h.01"/>',
+  filter:'<path d="M3 4h18l-7 8v6l-4 2v-8z"/>',
+  home:'<path d="m3 11 9-8 9 8m-16-1v11h14V10m-9 11v-6h4v6"/>',
+  calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4m8-4v4"/>',
+  chart:'<path d="M3 21h18M5 20v-6h4v6m2 0V9h4v11m2 0V4h4v16"/>',
+  check:'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>'
+};
+const icon = name => `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${shapes[name]}</svg>`;
+const sourceIcons=['bank','shield','people','more'];
+const navIcons=['home','coins','clock','wallet','bank','chart','calendar','people'];
+const brand = '<div class="brand"><svg aria-hidden="true" viewBox="0 0 56 44"><path fill="#087f73" d="M2 34 12 10c2-5 6-7 11-7 5 0 8 3 10 7l5 12 6-15c1-3 3-4 6-4h5L44 33c-2 5-5 7-10 7-4 0-7-2-9-6l-6-13-5 13c-1 4-4 6-8 6H0z"/></svg><div>Nagora<br>Salud</div></div>';
 const button = (action,label,primary=false) => `<button type="button" data-action="${action}" ${primary?'class="primary"':''}>${label}</button>`;
 const options = (items, selected) => items.map(item => {
   const [value,label] = Array.isArray(item) ? item : [item,item];
@@ -97,6 +115,30 @@ function commitments() {
       .map(r=>({day:r.day,text:r.note,action:'done:'+r.id,label:'Marcar como hecho'}))
   ].sort((a,b)=>a.day.localeCompare(b.day));
 }
+let allIncome=false;
+function incomePage(items,pending,totals) {
+  const full=allIncome || Boolean(origin || status);
+  return `<div class="income-screen">
+    <header class="income-title"><span class="symbol">${icon('coins')}</span><div><h1>Ingresos y honorarios</h1><p>Registrá tus cobros y seguí cuánto te deben.</p></div></header>
+    <div class="income-top">
+      <article class="income-kpi mint">${icon('wallet')}<div><span>${state.month===state.today.slice(0,7)?'Cobrado este mes':'Cobrado en el mes elegido'}</span><strong>${pesos(totals.received)}</strong></div></article>
+      <article class="income-kpi yellow">${icon('clock')}<div><span>Por cobrar</span><strong>${pesos(totals.pending)}</strong><small>${pending.length} ${pending.length===1?'cobro pendiente':'cobros pendientes'}</small></div></article>
+      ${button('income',icon('plus')+' Registrar ingreso',true)}
+    </div>
+    <div class="income-body"><section class="income-list">
+      <header class="row"><h2>${full?'Movimientos':'Últimos ingresos'}</h2>${!origin&&!status&&items.length>4?button('income-list',allIncome?'Ver últimos':'Ver todos →'):''}</header>
+      ${(full?items:items.slice(0,4)).map(r=>`<button class="income-line" type="button" data-action="show:${r.id}">
+        <span class="symbol">${icon(sourceIcons[sources.indexOf(r.source)]||'coins')}</span>
+        <span class="income-label"><strong>${esc(r.payer_name||r.source)}</strong><small>${esc(r.concept)}</small></span>
+        <time datetime="${r.day}">${new Intl.DateTimeFormat('es-AR',{day:'numeric',month:'short',timeZone:'UTC'}).format(new Date(r.day+'T00:00:00Z'))}</time>
+        <strong>${pesos(r.amount)}</strong><span class="badge ${r.balance&&!r.void?'waiting':''}">${r.state}</span>
+      </button>`).join('')||empty}
+    </section><section class="income-filters" aria-label="Filtros">
+      <h2>${icon('filter')} Filtrar por…</h2>
+      ${sources.map((source,i)=>`<button type="button" data-action="origin:${i}" aria-pressed="${origin===source}">${icon(sourceIcons[i])}<span>${source}</span><span aria-hidden="true">›</span></button>`).join('')}
+      ${period()}${select('Estado','filter-state',[['','Todos'],'Por cobrar','Cobrado','Parcialmente cobrado','Cerrado con ajuste','Anulado'],status)}
+    </section></div></div>`;
+}
 function renderPage() {
   const {totals,records,payers,profile} = state;
   const pending = records.filter(r=>r.kind==='income' && !r.void && r.balance);
@@ -116,6 +158,7 @@ function renderPage() {
     const items = records.filter(r=>r.kind===(income?'income':'expense') &&
       (r.day.startsWith(state.month) || r.settlements.some(s=>s.day.startsWith(state.month))) &&
       (!income || ((!origin||r.source===origin)&&(!status||r.state===status))));
+    if(income) return incomePage(items,pending,totals);
     return heading(income?'Ingresos y honorarios':'Mis gastos',income?'Registrá lo que ganaste y controlá lo que todavía te deben.':'Revisá lo que pagaste y lo que te falta pagar.',
       button(income?'income':'expense',income?'+ Registrar ingreso':'+ Registrar gasto',true)) +
       `<div class="toolbar">${period()}${income?select('Origen','filter-source',[['','Todos'],...sources],origin)+select('Estado','filter-state',[['','Todos'],'Por cobrar','Cobrado','Parcialmente cobrado','Cerrado con ajuste','Anulado'],status):''}</div>
@@ -143,14 +186,21 @@ function renderPage() {
     `<section class="panel"><h2>Fechas para tener en cuenta</h2>${commitments().map(item=>`<article class="entry row"><span>${dateText(item.day)} · ${esc(item.text)}</span>${button(item.action,item.label)}</article>`).join('')||'No hay compromisos con fecha.'}</section>`;
   return heading('Mi perfil','Configurá cómo aparece tu nombre.') +
     `<section class="panel"><form data-endpoint="profile">${field('Tu nombre','name',profile.name)}<p class="error" role="alert"></p><button class="primary">Guardar perfil</button></form></section>
-    <section class="panel"><h2>Ayuda</h2><details><summary>¿Cómo registro algo que todavía me deben?</summary><p>Entrá a Ingresos, tocá Registrar ingreso y dejá sin marcar “Ya me pagaron”. Cuando cobres, registrá el pago desde Pendientes.</p></details>
+    <section class="panel"><h2>Ayuda</h2><details><summary>¿Cómo registro algo que todavía me deben?</summary><p>Entrá a Ingresos, tocá Registrar ingreso y elegí “Por cobrar”. Cuando cobres, registrá el pago desde Pendientes.</p></details>
     <details><summary>¿Qué pongo en concepto?</summary><p>Usá una descripción como “Consultas de abril”. Evitá incluir nombres o datos de pacientes.</p></details></section>${profile.demo?'':button('recovery','Generar código de recuperación')} ${button('logout','Cerrar sesión')}`;
 }
 function render() {
-  layout.innerHTML=`<div class="shell"><aside>${brand}<nav aria-label="Secciones">${pages.map(name=>`<button type="button" data-action="page:${name}" ${name===page?'aria-current="page"':''}>${name}</button>`).join('')}</nav></aside>
-    <main id="main" tabindex="-1">${state.profile.demo?'<div class="demo">Cuenta de ejemplo · Dr. Martín López · Medicina clínica</div>':''}${renderPage()}</main></div>`;
+  const pendingCount=state.records.filter(r=>r.kind==='income'&&!r.void&&r.balance).length;
+  layout.innerHTML=`<div class="shell"><aside>${brand}<nav aria-label="Secciones">${pages.map((name,i)=>`<button type="button" data-action="page:${name}" ${name===page?'aria-current="page"':''}>${icon(navIcons[i])}<span>${({Pendientes:'Cobros pendientes',Resultado:'Reportes'})[name]||name}</span>${name==='Pendientes'&&pendingCount?`<small class="nav-count">${pendingCount}</small>`:''}</button>`).join('')}</nav><div class="side-help">${button('page:Perfil','Ayuda')}</div></aside>
+    <main id="main" tabindex="-1"><header class="account-bar">${state.profile.demo?'<span class="demo-tag">Datos de ejemplo</span>':''}${button('page:Perfil',icon('people')+' '+esc((state.profile.demo?'Dr. ':'')+state.profile.name)+' ⌄')}</header>${renderPage()}</main></div>`;
 }
-function openDialog(title,html) {
+function openDialog(title,html,wide=false) {
+  dialog.classList.toggle('income-dialog',wide);
+  if(wide) {
+    dialog.innerHTML=`<header class='income-title'><span class='symbol'>${icon('coins')}</span><div><h2 id='dialog-title'>Registrar ingreso</h2><p>Sumá un cobro por una consulta, práctica u honorario.</p></div><button type='button' data-action='close' aria-label='Cerrar'>×</button></header>${html}`;
+    if(!dialog.open) dialog.showModal();
+    return;
+  }
   dialog.innerHTML=`<header class="head"><h2 id="dialog-title">${esc(title)}</h2>${button('close','Cerrar')}</header>${html}`;
   if (!dialog.open) dialog.showModal();
   (dialog.querySelector('input:not([type=hidden]), select') || dialog.querySelector('button'))?.focus();
@@ -185,6 +235,28 @@ function movementForm(kind,source,record) {
     </details>`,record?'Guardar cambios':income?'Guardar ingreso':'Guardar gasto');
   if (!record && income) dialog.querySelector('.badge').insertAdjacentHTML('afterend',button('income','Cambiar origen'));
 }
+function registerIncome(source='',draft={}) {
+  const entity=sources.slice(0,2).includes(source);
+  const entities=state.payers.filter(p=>p.kind===source);
+  const paid=draft.source===source ? draft.paid==='on' : source==='Particular';
+  const sourcePicker=`<div class="source-picker"><strong>¿De dónde viene el ingreso?</strong><div class="choices">${sources.map((item,i)=>`<button type="button" data-action="source:${i}" aria-pressed="${source===item}">${icon(sourceIcons[i])}${item}</button>`).join('')}</div></div>`;
+  const fields=entity&&!entities.length ? `<p>Agregá una entidad para registrar sus ingresos.</p>${button('payer','Agregar entidad',true)}` :
+    `<form data-endpoint="movements"><input name="kind" type="hidden" value="income"><input name="source" type="hidden" value="${esc(source)}">
+      ${entity?select('¿Cuál?','payer',entities.map(p=>[p.id,p.name]),draft.source===source?draft.payer:null):''}
+      <div class="form-grid">
+        ${field('Concepto o prestación','concept',draft.concept)}
+        ${field('Monto en pesos','amount',draft.amount)}
+        ${field(entity?'Fecha de prestación o liquidación':'Fecha del movimiento','day',draft.day||state.today,'date')}
+        <fieldset class="income-status"><legend>Estado</legend><label><input type="radio" name="paid" value="on" ${paid?'checked':''}>${icon('check')} Cobrado</label><label><input type="radio" name="paid" value="off" ${!paid?'checked':''}>${icon('clock')} Por cobrar</label></fieldset>
+        <div id="paid-date" ${paid?'':'hidden'}>${field('Fecha del cobro','paid_day',draft.paid_day||state.today,'date',false)}</div>
+      </div>
+      <details><summary>Más opciones</summary><div class="form-grid">${field('Fecha estimada de cobro','due',draft.due,'date',false)}${entity?field('Número de liquidación','reference',draft.reference,'text',false):''}</div><label><input type="checkbox" name="confirm_duplicate" ${draft.confirm_duplicate?'checked':''}>Permitir un movimiento igual si corresponde</label></details>
+      <p class="error" role="alert"></p><footer class="income-actions">${button('close','Cancelar')}<button class="primary">${icon('check')} Guardar ingreso</button></footer>
+    </form>`;
+  openDialog('Registrar ingreso',sourcePicker+(source?fields:'<p class="muted">Elegí el origen para continuar.</p>'),true);
+  dialog.querySelector('.choices [aria-pressed="true"], .choices button')?.focus();
+  if(source) dialog.querySelector('.choices [aria-pressed="true"]')?.focus();
+}
 async function action(name) {
   const [command,arg]=name.split(':');
   const r=state?.records.find(m=>String(m.id)===arg);
@@ -202,11 +274,20 @@ async function action(name) {
     case 'logout': await api('logout',{}); state=null; page='Inicio'; origin=''; status=''; auth(); break;
     case 'page': page=arg; render(); document.querySelector('main').focus(); break;
     case 'close': dialog.close(); break;
-    case 'income':
-      openDialog('¿De dónde viene el ingreso?',`<p>Elegí quién te paga.</p><div class="choices">${sources.map((source,i)=>button('source:'+i,source)).join('')}</div>`);
-      dialog.querySelector('.choices button').focus();
+    case 'income': registerIncome(); break;
+    case 'source': {
+      const form=dialog.querySelector('form');
+      registerIncome(sources[Number(arg)],form?Object.fromEntries(new FormData(form)):{});
       break;
-    case 'source': movementForm('income',sources[Number(arg)]); break;
+    }
+    case 'income-list': allIncome=!allIncome; render(); document.querySelector('.income-list header button')?.focus(); break;
+    case 'origin': {
+      const source=sources[Number(arg)];
+      origin=origin===source?'':source;
+      render();
+      document.querySelector('[data-action="origin:'+arg+'"]').focus();
+      break;
+    }
     case 'expense': movementForm('expense'); break;
     case 'edit': movementForm(r.kind,r.source,r); break;
     case 'show': openDialog('Detalle del movimiento',entry(r,'pending')); break;
@@ -252,7 +333,7 @@ document.addEventListener('change',async event=>{
       render();
       document.querySelector('[name="'+name+'"]').focus();
     }
-    if(name==='paid') dialog.querySelector('#paid-date').hidden=!checked;
+    if(name==='paid') dialog.querySelector('#paid-date').hidden=event.target.type==='radio'?value!=='on':!checked;
   } catch(error) { notify(error.message); }
 });
 document.addEventListener('submit',async event=>{

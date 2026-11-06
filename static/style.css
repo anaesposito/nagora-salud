@@ -2,3 +2,70 @@
 *{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button,input,select,textarea{min-height:46px}button{cursor:pointer;border:1px solid var(--border);border-radius:10px;background:#fff;color:#14213d;padding:.65rem 1rem;font-weight:700}button:hover{border-color:var(--green)}button.primary{background:var(--green);color:white;border-color:var(--green)}button:disabled{opacity:.65;cursor:wait}:focus-visible{outline:3px solid #1160ad;outline-offset:3px}input,select,textarea{width:100%;padding:.6rem;border:1px solid #879b94;border-radius:8px;background:white;color:inherit}input[type=checkbox]{width:20px;height:20px;min-height:0;vertical-align:middle;margin-right:.5rem}label{display:block;font-weight:650;margin-bottom:.85rem}label input:not([type=checkbox]),label select,label textarea{display:block;margin-top:.35rem}small,.muted{color:var(--muted)}h1,h2,h3,p{margin-top:0}h1{font-size:clamp(1.65rem,4vw,2.55rem);letter-spacing:-.04em;margin-bottom:.45rem}h2{font-size:1.23rem}h3{font-size:1rem;margin-bottom:.35rem}.skip{position:absolute;left:-10000px}.skip:focus{left:1rem;top:.5rem;z-index:5;background:white;padding:1rem}.shell{min-height:100vh;display:grid;grid-template-columns:225px minmax(0,1fr)}aside{background:white;border-right:1px solid var(--border);padding:1.5rem 1rem}.brand{display:flex;align-items:center;gap:.7rem;font-size:1.1rem;font-weight:800;letter-spacing:-.03em;margin-bottom:1.5rem}.brand b{display:grid;place-items:center;background:var(--green);color:white;border-radius:9px;width:38px;height:38px}.brand small{display:block;font-size:.68rem;font-weight:500;letter-spacing:normal}nav{display:grid;gap:.35rem}nav button{text-align:left;border-color:transparent}nav button[aria-current=page]{background:var(--mint);color:#095a52}main{width:100%;max-width:1120px;padding:clamp(1rem,4vw,3rem);margin:auto;align-self:start}.head,.row,.toolbar{display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap}.toolbar{justify-content:flex-start;margin:1rem 0}.toolbar label{margin:0}.head{margin-bottom:1.4rem}.head p{margin-bottom:0}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;margin-bottom:1rem}.card,.panel{background:white;border:1px solid var(--border);border-radius:15px;padding:1rem;min-width:0}.card strong{display:block;font-size:clamp(1.1rem,2.4vw,1.7rem);margin-top:.4rem;overflow-wrap:anywhere}.mint{background:var(--mint)}.yellow{background:#fff3da}.coral{background:#fce8e8}.panel{margin:1rem 0}.entry{padding:.8rem 0;border-top:1px solid var(--border);overflow-wrap:anywhere}.entry p{margin:0}.badge{display:inline-block;background:var(--mint);border-radius:20px;padding:.2rem .55rem;font-size:.82rem}.auth{max-width:500px;margin:5vh auto}.auth .brand{margin-bottom:2rem}dialog{width:min(100% - 2rem,520px);max-height:90dvh;border:1px solid var(--border);border-radius:18px;color:inherit;padding:1.4rem;background:#fff}dialog::backdrop{background:#14213d88}.choices{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}.choices button{text-align:left;min-height:68px}.error{color:#941f27;min-height:1em}.demo{background:#fff3da;padding:.5rem .75rem;border-radius:8px;margin-bottom:1rem}#notice:not(:empty){position:fixed;right:1rem;bottom:1rem;max-width:calc(100% - 2rem);padding:.8rem 1rem;background:#144f48;color:white;border-radius:10px;z-index:3}summary{cursor:pointer;padding:.4rem 0}details{margin:.6rem 0}
 @media(max-width:850px){.cards{grid-template-columns:1fr 1fr}.shell{grid-template-columns:180px minmax(0,1fr)}}
 @media(max-width:620px){.shell{display:block}aside{border-right:0;border-bottom:1px solid var(--border);padding:.75rem 1rem}.brand{margin-bottom:.5rem}nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:.2rem}nav button{padding:.25rem;text-align:center;font-size:.8rem}.cards{grid-template-columns:1fr}.card{display:flex;align-items:center;justify-content:space-between;gap:.5rem}.card strong{margin:0}dialog{width:100%;height:100dvh;max-width:none;max-height:none;margin:0;border:0;border-radius:0}.head{align-items:flex-start}}
+
+/* Shared visual language and the income workspace. */
+:root{--green:#087568;--border:#e2e8e5;background:#faf9f7;color:#101b33}
+.shell{grid-template-columns:245px minmax(0,1fr)}
+.shell>aside{background:#faf9f7;display:flex;flex-direction:column;padding:2rem 1rem}
+.shell .brand{margin:.2rem 1rem 2.1rem;font-size:1.5rem;line-height:1.04;gap:.7rem}
+.brand svg{width:53px;height:44px;flex:none}
+svg{width:1.45rem;height:1.45rem;vertical-align:middle;flex:none}
+.shell nav button{display:flex;align-items:center;gap:.8rem;background:transparent;padding:.85rem .8rem}
+.shell nav button[aria-current=page]{background:#dff2ee;color:#08685d}
+.nav-count{margin-left:auto;background:#a82d55;color:white;border-radius:2rem;padding:.15rem .45rem}
+.side-help{margin-top:auto;padding-top:1rem}
+.account-bar{display:flex;justify-content:flex-end;align-items:center;gap:1rem;margin-bottom:1rem}
+.account-bar button{border:0;background:transparent}
+.account-bar svg{color:var(--green);margin-right:.35rem}
+.demo-tag{font-size:.82rem;color:#4e5c62}
+.shell main{max-width:1440px;padding:1.15rem clamp(1.15rem,2.5vw,2.5rem) 2.5rem}
+.income-title{display:flex;align-items:center;gap:1rem;margin-bottom:1rem}
+.income-title p{margin:0;color:#4e5c62;font-size:1.08rem}
+.symbol{display:grid;place-items:center;flex:none;width:48px;height:48px;border-radius:16px;background:#e5f5f0;color:var(--green)}
+.income-title>.symbol{width:68px;height:68px;border-radius:21px}
+.income-title>.symbol svg{width:38px;height:38px}
+.income-top{display:grid;grid-template-columns:1fr 1fr minmax(205px,.85fr);gap:1.15rem;align-items:center;margin-bottom:1.15rem}
+.income-kpi{display:flex;gap:.75rem;border-radius:22px;min-height:122px;padding:1.1rem;align-items:flex-start}
+.income-kpi>svg{width:30px;height:30px;color:var(--green)}
+.income-kpi.yellow>svg{color:#a95a05}
+.income-kpi span{font-weight:750}
+.income-kpi strong{display:block;font-size:clamp(1.45rem,3vw,2.6rem);letter-spacing:-.035em;overflow-wrap:anywhere}
+.income-kpi small{display:block}
+.income-top>.primary{min-height:65px;font-size:1.1rem;border-radius:17px}
+.income-top>.primary svg,.income-actions .primary svg{margin-right:.35rem}
+.income-body{display:grid;grid-template-columns:minmax(0,2.6fr) minmax(205px,1fr);gap:1rem;align-items:start}
+.income-list,.income-filters{background:white;border:1px solid var(--border);padding:1rem;border-radius:21px;min-width:0}
+.income-list header{margin-bottom:.55rem}
+.income-list h2,.income-filters h2{margin:0;font-size:1.3rem}
+.income-list header button{border:0;color:var(--green)}
+.income-line{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:.65rem;align-items:center;text-align:left;width:100%;border:0;border-top:1px solid var(--border);border-radius:0;padding:.65rem .1rem;font-weight:400;overflow-wrap:anywhere}
+.income-line:hover{background:#f5faf8}
+.income-line time{color:var(--muted);font-size:.85rem}
+.income-label small,.income-label strong{display:block}
+.income-line .badge{color:#176047;justify-self:start}
+.income-line .waiting{background:#fff3da;color:#85500e}
+.income-filters{background:#eaf6f2;display:grid;gap:.5rem}
+.income-filters h2{margin:.2rem 0 .4rem}
+.income-filters button{display:grid;grid-template-columns:auto 1fr auto;gap:.55rem;text-align:left;align-items:center}
+.income-filters button[aria-pressed=true]{border-color:var(--green);background:#d9f0e8}
+.income-filters svg{color:var(--green)}
+.income-filters label{margin:.35rem 0 0;font-size:.88rem}
+.income-dialog{width:min(840px,calc(100% - 2rem));padding:1.6rem;border-radius:24px}
+.income-dialog::backdrop{background:#131d3a62;backdrop-filter:blur(2px)}
+.income-dialog .income-title h2{font-size:clamp(1.5rem,3vw,2.2rem);margin:0 0 .2rem}
+.income-dialog .income-title>button{margin-left:auto;border:0;font-size:1.6rem}
+.source-picker{margin-bottom:1rem}
+.source-picker .choices{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:.5rem}
+.source-picker button{display:grid;place-items:center;gap:.45rem;text-align:center;min-height:82px}
+.source-picker button[aria-pressed=true]{background:#e5f5f0;color:#08685d;border-color:var(--green)}
+.form-grid,.income-actions{display:grid;grid-template-columns:1fr 1fr;gap:.6rem 1rem}
+.income-dialog .form-grid label{margin-bottom:.35rem}
+.income-status{border:0;margin:0;padding:0;min-width:0;display:flex;gap:.45rem}
+.income-status legend{font-weight:650;margin-bottom:.35rem}
+.income-status label{position:relative;display:flex;align-items:center;justify-content:center;gap:.25rem;flex:1;min-height:46px;border:1px solid #879b94;border-radius:8px;cursor:pointer;padding:.25rem;font-size:.91rem}
+.income-status input{position:absolute;opacity:0;width:1px;height:1px;min-height:0}
+.income-status label:has(:checked){background:#e5f5f0;border-color:var(--green);color:#08685d}
+.income-status label:has(:focus-visible){outline:3px solid #1160ad;outline-offset:2px}
+.income-actions button{min-height:54px}
+@media(max-width:1050px){.shell{grid-template-columns:180px minmax(0,1fr)}.income-top{grid-template-columns:1fr 1fr}.income-top>.primary{grid-column:1/-1;justify-self:start}.income-body{grid-template-columns:minmax(0,1fr)}.income-filters{grid-row:1;grid-template-columns:repeat(2,minmax(0,1fr))}.income-filters h2{grid-column:1/-1}}
+@media(max-width:620px){.shell>aside{padding:.65rem .8rem}.shell .brand{margin:0 0 .5rem;font-size:1rem}.brand svg{width:32px;height:29px}.shell nav button{justify-content:center;gap:.25rem;padding:.35rem;font-size:.74rem}.shell nav svg{width:1rem;height:1rem}.nav-count{display:none}.side-help{display:none}.shell main{padding:.7rem .8rem 1.5rem}.income-title>.symbol{width:44px;height:44px}.income-title>.symbol svg{width:25px;height:25px}.income-title p{font-size:.9rem}.account-bar{margin:0 0 .55rem}.income-top{gap:.55rem}.income-kpi{gap:.25rem;padding:.7rem;min-height:95px;border-radius:13px}.income-kpi>svg{width:20px;height:20px}.income-kpi span{font-size:.84rem}.income-kpi strong{font-size:1.2rem}.income-top>.primary{width:100%;min-height:49px}.income-line{grid-template-columns:auto minmax(0,1fr) auto}.income-line time{grid-column:2}.income-line .badge{grid-column:3;grid-row:2}.income-line .symbol{width:33px;height:33px}.income-line>strong{grid-column:3;grid-row:1}.income-dialog{width:100%;border-radius:0;padding:1rem}.source-picker .choices{grid-template-columns:repeat(2,minmax(0,1fr))}.source-picker button{min-height:60px}.form-grid{grid-template-columns:1fr}}

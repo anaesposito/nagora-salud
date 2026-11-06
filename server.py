@@ -62,6 +62,9 @@ class App(BaseHTTPRequestHandler):
         parsed = urlsplit(self.path)
         path = parsed.path
         try:
+            if not write and path=='/api/config':
+                self.respond(200,{'demoOnly':self.server.demo_only})
+                return
             if not write and path in ASSETS:
                 filename,mime = ASSETS[path]
                 self.respond(200,(ROOT/'static'/filename).read_bytes(),mime)
@@ -99,6 +102,8 @@ class App(BaseHTTPRequestHandler):
         token_hash = hashlib.sha256(token.encode()).hexdigest()
         account = db.execute('SELECT a.* FROM account a JOIN session s ON a.id=s.owner WHERE s.token=? AND s.expires>?',
                              (token_hash,int(time.time()))).fetchone()
+        if write and self.server.demo_only and path in ('/api/register','/api/login','/api/reset'):
+            raise LookupError('Esta versión está habilitada para probar con datos de ejemplo.')
         if write and path=='/api/reset':
             email=label(data.get('email'),254).lower()
             code=label(data.get('code'),64)
@@ -204,18 +209,20 @@ def make_server(database,host='127.0.0.1',port=8000,cert=None,key=None):
     initialize(database)
     server=ThreadingHTTPServer((host,port),App)
     server.database=database
-    server.secure=bool(cert)
+    server.demo_only=os.getenv('NAGORA_DEMO_ONLY')=='1'
+    server.secure=bool(cert) or os.getenv('RENDER')=='true'
     if cert:
         context=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(cert,key)
         server.socket=context.wrap_socket(server.socket,server_side=True)
     scheme='https' if cert else 'http'
-    server.origin=os.environ.get('NAGORA_ORIGIN',f'{scheme}://{host}:{server.server_port}')
+    server.origin=os.getenv('NAGORA_ORIGIN') or os.getenv('RENDER_EXTERNAL_URL') or f'{scheme}://{host}:{server.server_port}'
     return server
 
 if __name__=='__main__':
     os.umask(0o077)
-    with make_server(os.getenv('NAGORA_DB','nagora.sqlite3'),port=int(os.getenv('NAGORA_PORT','8000')),
+    with make_server(os.getenv('NAGORA_DB','nagora.sqlite3'),host=os.getenv('NAGORA_HOST','127.0.0.1'),
+                     port=int(os.getenv('PORT',os.getenv('NAGORA_PORT','8000'))),
                      cert=os.getenv('NAGORA_CERT'),key=os.getenv('NAGORA_KEY')) as server:
         print(f'Nagora Salud en {server.origin}',flush=True)
         server.serve_forever()

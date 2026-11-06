@@ -5,6 +5,7 @@ const notice = document.querySelector('#notice');
 const sources = ['Obra social','Prepaga','Particular','Otro'];
 const categories = ['Alquiler','Servicios','Insumos','Matrícula profesional','Equipamiento','Impuestos','Software','Otros'];
 const pages = ['Inicio','Ingresos','Pendientes','Gastos','Convenios','Resultado','Calendario','Perfil'];
+let demoOnly=false;
 let state, page = 'Inicio', origin = '', status = '', noticeTimer;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const pesos = cents => {
@@ -55,6 +56,10 @@ async function refresh(month=state?.month) {
   render();
 }
 function auth(register=false) {
+  if(demoOnly) {
+    layout.innerHTML=`<main id="main" class="auth" tabindex="-1">${brand}<section class="panel"><h1>Probá Nagora Salud</h1><p>Usá datos ficticios. Cada sesión de prueba es independiente y los cambios pueden perderse si el servicio se reinicia.</p>${button('demo','Entrar a la demo',true)}</section></main>`;
+    return;
+  }
   layout.innerHTML = `<main id="main" class="auth" tabindex="-1">${brand}
     <section class="panel"><h1>${register?'Creá tu cuenta':'Ingresá a tu cuenta'}</h1>
     <p class="muted">Tus ingresos, tus gastos y lo que te falta cobrar.</p>
@@ -291,4 +296,4 @@ document.addEventListener('submit',async event=>{
   } catch(error) { errorBox.textContent=error.message; }
   finally { submit.disabled=false; }
 });
-refresh().catch(()=>auth());
+api('config').then(config=>{ demoOnly=config.demoOnly; }).catch(()=>{}).then(()=>refresh().catch(()=>auth()));

@@ -195,6 +195,7 @@ function render() {
     <main id="main" tabindex="-1"><header class="account-bar">${state.profile.demo?'<span class="demo-tag">Datos de ejemplo</span>':''}${button('page:Perfil',icon('people')+' '+esc((state.profile.demo?'Dr. ':'')+state.profile.name)+' ⌄')}</header>${renderPage()}</main></div>`;
 }
 function openDialog(title,html,wide=false) {
+  stopDictation?.();
   dialog.classList.toggle('income-dialog',wide);
   if(wide) {
     dialog.innerHTML=`<header class='income-title'><span class='symbol'>${icon('coins')}</span><div><h2 id='dialog-title'>Registrar ingreso</h2><p>Sumá un cobro por una consulta, práctica u honorario.</p></div><button type='button' data-action='close' aria-label='Cerrar'>×</button></header>${html}`;
@@ -208,6 +209,92 @@ function openDialog(title,html,wide=false) {
 function formDialog(title,endpoint,html,submit='Guardar') {
   openDialog(title,`<form data-endpoint="${endpoint}">${html}<p class="error" role="alert"></p><button class="primary">${submit}</button></form>`);
 }
+const SpeechInput = window.SpeechRecognition || window.webkitSpeechRecognition;
+let stopDictation;
+dialog.addEventListener('close', () => {
+  if (!dialog.open) stopDictation?.();
+});
+
+function voicePanel(kind) {
+  const example = kind === 'income' ? 'Ayer cobré 25000 pesos por una consulta' : 'Hoy pagué 18000 pesos por insumos';
+  return `<details class="voice-panel"><summary>Cargar con voz</summary>
+    <p class="muted">Por ejemplo: «${example}». Evitá mencionar datos de pacientes.
+    El navegador puede procesar el audio en línea.</p>
+    ${SpeechInput ? button('voice-listen','Dictar') : '<p class="muted">El micrófono no está disponible en este navegador. Podés escribir la frase.</p>'}
+    <label>Tu frase<textarea rows="2" maxlength="240" data-voice-text></textarea></label>
+    ${button('voice-apply','Completar formulario')}
+    <p role="status" data-voice-status></p>
+  </details>`;
+}
+
+function listenToMovement() {
+  if (stopDictation) {
+    stopDictation();
+    return;
+  }
+  const text = dialog.querySelector('[data-voice-text]');
+  const status = dialog.querySelector('[data-voice-status]');
+  const trigger = dialog.querySelector('[data-action="voice-listen"]');
+  const speech = new SpeechInput();
+  speech.lang = 'es-AR';
+  let timer;
+  const finish = message => {
+    if (!stopDictation || stopDictation !== cancel) return;
+    stopDictation = undefined;
+    clearTimeout(timer);
+    trigger.textContent = 'Dictar';
+    status.textContent = message;
+  };
+  const cancel = () => {
+    finish('Dictado cancelado.');
+    speech.abort();
+  };
+  stopDictation = cancel;
+  speech.onresult = event => {
+    if (stopDictation !== cancel) return;
+    text.value = event.results[0][0].transcript.trim().slice(0,240);
+    finish('Revisá la frase y tocá Completar formulario.');
+  };
+  speech.onerror = () => finish('No pudimos usar el dictado. Revisá el permiso del micrófono o escribí la frase.');
+  speech.onend = () => finish('No se detectó una frase. Podés volver a dictar o escribirla.');
+  trigger.textContent = 'Cancelar dictado';
+  status.textContent = 'Escuchando…';
+  try {
+    speech.start();
+    timer = setTimeout(cancel, 20000);
+  } catch {
+    finish('No se pudo iniciar el micrófono. Podés escribir la frase.');
+  }
+}
+
+function movementFromPhrase(phrase, kind, today) {
+  const verbs = kind === 'income' ? 'cobr[eé]|recib[ií]|me pagaron' : 'pagu[eé]|gast[eé]';
+  const pattern = new RegExp(`^(?:(hoy|ayer)\\s+)?(${verbs})\\s+\\$?\\s*((?:[0-9]{1,3}(?:\\.[0-9]{3}){1,3}|[0-9]{1,11})(?:,[0-9]{1,2})?)(?:\\s+pesos)?(?:\\s+(?:por|en)\\s+(.+))?[.!]?$`,'iu');
+  const match = phrase.trim().replace(/\s+/g,' ').match(pattern);
+  if (!match || Number(match[3].replaceAll('.','').replace(',','.')) <= 0) return;
+  const date = new Date(today+'T00:00:00Z');
+  if (match[1]?.toLowerCase() === 'ayer') date.setUTCDate(date.getUTCDate()-1);
+  return {amount:match[3], concept:match[4]?.replace(/[.!]$/,'').slice(0,120), day:date.toISOString().slice(0,10)};
+}
+
+function applyMovementPhrase() {
+  const form = dialog.querySelector('form');
+  const {elements} = form;
+  const status = form.querySelector('[data-voice-status]');
+  const draft = movementFromPhrase(form.querySelector('[data-voice-text]').value,elements.kind.value,state.today);
+  if (!draft) {
+    status.textContent = 'No pude completar el formulario. Usá una frase como la del ejemplo, con el monto en números.';
+    return;
+  }
+  elements.amount.value = draft.amount;
+  if (draft.concept) elements.concept.value = draft.concept;
+  elements.day.value = elements.paid_day.value = draft.day;
+  if (elements.kind.value === 'income') elements.paid.value = 'on';
+  else elements.paid.checked = true;
+  form.querySelector('#paid-date').hidden = false;
+  status.textContent = 'Revisá el monto, el concepto y la fecha antes de guardar.';
+}
+
 function movementForm(kind,source,record) {
   const income=kind==='income';
   const entity=income&&sources.slice(0,2).includes(source);
@@ -222,6 +309,7 @@ function movementForm(kind,source,record) {
     ${income?`<input type="hidden" name="source" value="${esc(source)}"><p class="badge">${esc(source)}</p>`:
       select('Categoría','source',categories,record?.source||'Otros')}
     ${entity?`${entities.length>5?field('Buscar entidad','payer-search','','search',false):''}${select('¿Cuál?','payer',entities.map(p=>[p.id,p.name]),record?.payer)}`:''}
+    ${record?'':voicePanel(kind)}
     ${field(income?'Concepto o prestación':'¿En qué gastaste?','concept',record?.concept)}
     ${field('Monto en pesos','amount',record?amountInput(record.amount):'')}
     ${field(entity?'Fecha de prestación o liquidación':'Fecha del movimiento','day',record?.day||state.today,'date')}
@@ -243,6 +331,7 @@ function registerIncome(source='',draft={}) {
   const fields=entity&&!entities.length ? `<p>Agregá una entidad para registrar sus ingresos.</p>${button('payer','Agregar entidad',true)}` :
     `<form data-endpoint="movements"><input name="kind" type="hidden" value="income"><input name="source" type="hidden" value="${esc(source)}">
       ${entity?select('¿Cuál?','payer',entities.map(p=>[p.id,p.name]),draft.source===source?draft.payer:null):''}
+      ${voicePanel('income')}
       <div class="form-grid">
         ${field('Concepto o prestación','concept',draft.concept)}
         ${field('Monto en pesos','amount',draft.amount)}
@@ -274,6 +363,8 @@ async function action(name) {
     case 'logout': await api('logout',{}); state=null; page='Inicio'; origin=''; status=''; auth(); break;
     case 'page': page=arg; render(); document.querySelector('main').focus(); break;
     case 'close': dialog.close(); break;
+    case 'voice-listen': listenToMovement(); break;
+    case 'voice-apply': applyMovementPhrase(); break;
     case 'income': registerIncome(); break;
     case 'source': {
       const form=dialog.querySelector('form');
@@ -342,6 +433,7 @@ document.addEventListener('submit',async event=>{
   const submit=form.querySelector('button.primary');
   const errorBox=form.querySelector('.error');
   if(submit.disabled) return;
+  stopDictation?.();
   submit.disabled=true;
   errorBox.textContent='';
   const data=Object.fromEntries(new FormData(form));

@@ -141,3 +141,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .home-metrics .card:last-child{grid-column:1/-1}
 }
 .home-metrics .card strong{overflow-wrap:normal;white-space:nowrap}
+
+/* Keep sidebar navigation inside its column on narrow tablets. */
+@media (min-width:621px) and (max-width:850px){
+  .shell nav{min-width:0;grid-template-columns:minmax(0,1fr)}
+  .shell nav button{width:100%;min-width:0;gap:.45rem;padding:.75rem .45rem;font-size:.9rem;overflow-wrap:anywhere}
+  .shell nav button span{min-width:0}
+  .shell nav .nav-count{display:none}
+}

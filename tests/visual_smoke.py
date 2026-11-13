@@ -27,9 +27,11 @@ async def main():
                 viewport: innerWidth,
                 documentWidth: document.documentElement.scrollWidth,
                 mainWidth: document.querySelector('main')?.getBoundingClientRect().width,
-                homeTop: document.querySelector('.home-overview')?.getBoundingClientRect().top
+                homeTop: document.querySelector('.home-overview')?.getBoundingClientRect().top,
+                kpiAmountsFit: [...document.querySelectorAll('.home-metrics .card strong')].every(el => el.scrollWidth <= el.clientWidth + 1 && el.getBoundingClientRect().height < 55)
             })""")
             assert metrics["documentWidth"] <= metrics["viewport"] + 1, f"Horizontal overflow at {width}: {metrics}"
+            assert metrics["kpiAmountsFit"], f"Financial amounts wrap or overflow at {width}: {metrics}"
             assert not errors, f"JavaScript errors at {width}: {errors}"
             print(f"PASS {width}px: {metrics}")
             await page.close()

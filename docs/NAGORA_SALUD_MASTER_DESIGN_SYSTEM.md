@@ -1,6 +1,6 @@
 # NAGORA SALUD — Master Design System
 
-**Versión:** 1.0 · **Estado:** especificación normativa, tokens de marca pendientes de verificar · **Aplicación:** web responsive/mobile-first
+**Versión:** 1.1 · **Estado:** especificación normativa con paleta y tipografía documentadas; componentes pendientes de auditoría en código · **Aplicación:** web responsive/mobile-first
 
 **Documentos rectores:** [Master de Producto](NAGORA_SALUD_MASTER_PRODUCT_DESIGN.md) y manual de marca Nagora. Si hay conflicto, detener la implementación y pedir decisión de Product Owner. **No inventar valores de marca.**
 
@@ -10,29 +10,44 @@
 **Cinco invariantes:** (1) una acción primaria por pantalla, (2) máximo tres cifras protagonistas en Inicio, (3) información adicional bajo demanda, (4) texto cotidiano y amable, (5) ningún dato financiero estimado se presenta como confirmado.
 
 ## 2. Fuente de verdad y tokens
-Usar Lato como familia tipográfica (según manual de marca). Antes de definir colores, isotipo, radio, sombras o variantes oficiales, extraer valores del manual de marca aprobado. Mientras no estén verificados, usar tokens semánticos sin fijar una paleta de marca definitiva.
+La guía de identidad Nagora recuperada indica **Aptos Display Semibold para títulos y Aptos Regular para interfaz**; Inter y sans-serif del sistema son alternativas. Esto corrige la referencia previa a Lato, que no coincide con esa guía. Antes de cerrar la implementación, contrastar con el archivo original del manual si hay versiones posteriores. La paleta oficial documentada es: teal oscuro #267B7E, teal principal #3A9898, menta #8ADCAE, blanco cálido #F8F7F2 y coral #F08A78. Iconografía: línea redondeada de 2 px. Grilla: 8 px; ritmo principal: 24–32 px. El logo conserva proporciones originales, sin efectos inventados.
 
-### 2.1 Contrato de tokens (CSS)
+### 2.1 Tokens ejecutables — propuesta de implementación
+Los **cinco colores de marca** provienen de la guía. Los colores de texto, bordes, superficies y radios adicionales son **tokens funcionales propuestos**, no colores oficiales nuevos. Validar contraste de cada combinación y estados antes de publicar.
+
 ```css
 :root {
-  --font-family: "Lato", system-ui, sans-serif;
-  --color-bg: /* valor validado */;
-  --color-surface: /* valor validado */;
-  --color-text: /* valor validado */;
-  --color-text-muted: /* valor validado */;
-  --color-border: /* valor validado */;
-  --color-primary: /* valor validado */;
-  --color-on-primary: /* valor validado */;
-  --color-success: /* valor validado */;
-  --color-warning: /* valor validado */;
-  --color-danger: /* valor validado */;
-  --color-focus: /* valor validado */;
-  --space-1: 4px; --space-2: 8px; --space-3: 12px;
-  --space-4: 16px; --space-6: 24px; --space-8: 32px;
-  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+  --brand-teal-dark: #267B7E;
+  --brand-teal: #3A9898;
+  --brand-mint: #8ADCAE;
+  --brand-warm-white: #F8F7F2;
+  --brand-coral: #F08A78;
+  --font-body: "Aptos", "Inter", system-ui, sans-serif;
+  --font-heading: "Aptos Display", "Aptos", "Inter", system-ui, sans-serif;
+  --color-bg: var(--brand-warm-white);
+  --color-surface: #FFFFFF;
+  --color-text: #19383A;
+  --color-text-muted: #405A5B;
+  --color-border: #D5DFDA;
+  --color-primary: var(--brand-teal-dark);
+  --color-on-primary: #FFFFFF;
+  --color-focus: #19383A;
+  --color-positive-bg: #E5F7EC;
+  --color-warning-bg: #FFF2E8;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
 }
 ```
-Este bloque es **esquema de referencia**, no CSS ejecutable hasta completar los valores de color. Espaciados y radios son **propuestas iniciales sujetas a validación visual**, no afirmaciones del manual. Los colores de estado nunca dependen solo del color; siempre acompañar con texto/ícono.
+
+**Regla de contraste:** el teal principal #3A9898 es un color de marca, pero no se presupone que funcione con texto blanco pequeño. Para botones con texto blanco, usar teal oscuro #267B7E solo tras comprobar contraste; mantener estados hover/focus/disabled igualmente accesibles. Menta y coral son acentos, no colores predeterminados de texto sobre blanco. Nunca depender solo del color para indicar estado.
+
+**Fuentes:** usar Aptos únicamente si hay licencia/disponibilidad válida en el entorno; no subir archivos de fuentes sin autorización. Fallback Inter/system-ui. No descargar ni distribuir fuentes propietarias desde Codex.
 
 ### 2.2 Jerarquía tipográfica propuesta
 - Título de pantalla: 24–28px, peso 700, interlineado 1.2.
@@ -146,7 +161,7 @@ Una PR de frontend debe incluir:
 - [ ] Capturas mobile (375px) y desktop (1280px), sin datos reales.
 - [ ] Una CTA principal y jerarquía visible en 5 segundos.
 - [ ] Máximo tres cifras protagonistas en Inicio; detalles progresivos.
-- [ ] Lato, tokens semánticos, contraste y foco comprobados.
+- [ ] Aptos Display/Aptos (o fallback autorizado), tokens semánticos, contraste y foco comprobados.
 - [ ] Texto comprensible sin jerga, tono optimista y amable.
 - [ ] Flujo completo y reversible; persistencia real; errores recuperables.
 - [ ] Montos y estados financieros correctamente diferenciados.
@@ -159,4 +174,4 @@ Una PR de frontend debe incluir:
 En entrevistas y tests: pedir «Registrá un ingreso», «Encontrá cuánto te falta cobrar», «Explicame qué significa te quedaría». Observar sin enseñar. Registrar tiempo, dudas, errores, comprensión de estimaciones y necesidad de ayuda. Si una persona confunde proyección con saldo real, **bloquear el release** hasta corregirlo.
 
 ## 14. Gobierno y evolución
-Cada cambio al sistema visual requiere motivo, impacto en accesibilidad y consistencia, capturas comparativas, validación con marca y aprobación de Product Owner. Los nuevos patrones se documentan aquí antes de replicarse. **Pendientes expresos:** verificar paleta, logo, variantes y reglas exactas del manual Nagora; auditar frontend existente; convertir tokens a código ejecutable; probar comprensión con usuarios.
+Cada cambio al sistema visual requiere motivo, impacto en accesibilidad y consistencia, capturas comparativas, validación con marca y aprobación de Product Owner. Los nuevos patrones se documentan aquí antes de replicarse. **Pendientes expresos:** cotejar la guía recuperada con el manual original y cualquier versión más reciente, confirmar archivos de logo y licencias tipográficas; auditar frontend existente; implementar tokens en código; probar contraste real y comprensión con usuarios.

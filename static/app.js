@@ -144,14 +144,26 @@ function renderPage() {
   const pending = records.filter(r=>r.kind==='income' && !r.void && r.balance);
   if (page==='Inicio') {
     const first = commitments()[0];
-    return heading('¡Hola, '+esc(profile.name.split(' ')[0])+'!','Así está tu actividad este mes.',button('income','+ Registrar ingreso',true)) +
-      `<div class="toolbar">${period()}</div><div class="cards">${card('Cobré este mes',totals.received)}${card('Me deben',totals.pending,'yellow')}
-      ${card('Gasté',totals.spent,'coral')}${card('Me queda',totals.net,'mint')}</div>
-      <p class="muted">“Me queda” resta lo que pagaste de lo que cobraste en el mes elegido. El saldo pendiente incluye todos los meses.</p>
-      <section class="panel"><h2>¿Qué necesito hacer hoy?</h2>
-      <div class="row entry"><span>${pending.length?'Tenés '+pending.length+' cobros pendientes.':'Estás al día con tus cobros.'}</span>${pending.length?button('page:Pendientes','Ver pendientes'):''}</div>
-      ${first?`<div class="row entry"><span>${dateText(first.day)} · ${esc(first.text)}</span>${button(first.action,first.label)}</div>`:''}</section>
-      <div class="toolbar">${button('expense','Registrar gasto')}</div>`;
+    const pendingLabel = pending.length===1?'1 cobro pendiente':pending.length+' cobros pendientes';
+    return heading('Hola, '+esc(profile.name.split(' ')[0]),'Tu actividad, sin complicaciones.') +
+      `<section class="home-overview" aria-label="Resumen de tu actividad">
+        <div class="toolbar">${period()}</div>
+        <div class="home-metrics">
+          ${card('Ya cobraste este mes',totals.received)}
+          ${card('Te falta cobrar',totals.pending,'yellow')}
+          ${card('Te quedó de lo cobrado',totals.net,'mint')}
+        </div>
+        <p class="home-explainer">El último importe es lo que cobraste menos lo que pagaste en el mes. <strong>No es una proyección al cierre.</strong> Lo pendiente incluye cobros de otros meses.</p>
+        <div class="home-primary">${button('income','Registrar ingreso',true)}</div>
+      </section>
+      <section class="panel home-next"><h2>¿Qué podés hacer ahora?</h2>
+        <p>${pending.length?'Tenés '+pendingLabel+'.':'No tenés cobros pendientes registrados.'}</p>
+        ${pending.length?button('page:Pendientes','Revisar cobros pendientes'):''}
+        ${first?`<p class="muted">Próximo seguimiento: ${dateText(first.day)} · ${esc(first.text)}</p>`:''}
+        <details><summary>Otras acciones</summary>
+          <div class="toolbar">${button('expense','Registrar gasto')}${button('page:Resultado','Ver detalle de resultados')}</div>
+        </details>
+      </section>`;
   }
   if (page==='Ingresos' || page==='Gastos') {
     const income = page==='Ingresos';

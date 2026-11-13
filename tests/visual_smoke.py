@@ -81,6 +81,18 @@ async def main():
         await page.locator('[data-action="close"]').first.click()
         print("PASS invalid zero amount rejected without persistence")
 
+        # Edit the saved expense and verify that its amount changed in storage.
+        await page.locator('[data-action="page:Gastos"]').first.click()
+        expense = next(x for x in after if x["concept"] == "QA gasto navegador")
+        await page.locator(f'[data-action="show:{expense["id"]}"]').first.click() if await page.locator(f'[data-action="show:{expense["id"]}"]').count() else page.get_by_text("QA gasto navegador").first.click()
+        await page.locator(f'[data-action="edit:{expense["id"]}]').first.click()
+        edit_form = page.locator(f'dialog form[data-endpoint="movements/{expense["id"]}/edit"]')
+        await edit_form.locator('[name="amount"]').fill("3400")
+        await edit_form.get_by_role("button", name="Guardar cambios").click()
+        edited = await page.evaluate("async () => (await (await fetch('/api/state')).json()).records")
+        assert next(x for x in edited if x["id"] == expense["id"])["amount"] == 340000, "Expense edit not persisted"
+        print("PASS expense amount edited and persisted")
+
         await browser.close()
 
 if __name__ == "__main__":

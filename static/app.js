@@ -203,7 +203,9 @@ function renderPage() {
 }
 function render() {
   const pendingCount=state.records.filter(r=>r.kind==='income'&&!r.void&&r.balance).length;
-  layout.innerHTML=`<div class="shell"><aside>${brand}<nav aria-label="Secciones">${pages.map((name,i)=>`<button type="button" data-action="page:${name}" ${name===page?'aria-current="page"':''}>${icon(navIcons[i])}<span>${({Pendientes:'Cobros pendientes',Resultado:'Reportes'})[name]||name}</span>${name==='Pendientes'&&pendingCount?`<small class="nav-count">${pendingCount}</small>`:''}</button>`).join('')}</nav><div class="side-help">${button('page:Perfil','Ayuda')}</div></aside>
+  const primaryPages=['Inicio','Ingresos','Gastos'];
+  const navButton=name=>`<button type="button" data-action="page:${name}" ${name===page?'aria-current="page"':''}>${icon(navIcons[pages.indexOf(name)])}<span>${({Pendientes:'Cobros pendientes',Resultado:'Reportes'})[name]||name}</span>${name==='Pendientes'&&pendingCount?`<small class="nav-count">${pendingCount}</small>`:''}</button>`;
+  layout.innerHTML=`<div class="shell"><aside>${brand}<nav aria-label="Secciones">${primaryPages.map(navButton).join('')}<details class="nav-more" ${primaryPages.includes(page)?'':'open'}><summary>Más opciones</summary><div>${pages.filter(name=>!primaryPages.includes(name)).map(navButton).join('')}</div></details></nav><div class="side-help">${button('page:Perfil','Ayuda')}</div></aside>
     <main id="main" tabindex="-1"><header class="account-bar">${state.profile.demo?'<span class="demo-tag">Datos de ejemplo</span>':''}${button('page:Perfil',icon('people')+' '+esc((state.profile.demo?'Dr. ':'')+state.profile.name)+' ⌄')}</header>${renderPage()}</main></div>`;
 }
 function openDialog(title,html,wide=false) {
@@ -478,7 +480,13 @@ document.addEventListener('submit',async event=>{
     await refresh(month);
     document.querySelector('main').focus();
     if(previous) notify('Guardado. Tus registros están actualizados.');
-  } catch(error) { errorBox.textContent=error.message; }
+  } catch(error) {
+    errorBox.textContent=error.message;
+    errorBox.tabIndex=-1;
+    errorBox.id='form-error';
+    form.setAttribute('aria-describedby','form-error');
+    errorBox.focus();
+  }
   finally { submit.disabled=false; }
 });
 api('config').then(config=>{ demoOnly=config.demoOnly; }).catch(()=>{}).then(()=>refresh().catch(()=>auth()));

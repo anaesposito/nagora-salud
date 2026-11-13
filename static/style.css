@@ -136,6 +136,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 
 /* Tablet: keep monetary values readable instead of breaking digits across lines. */
+.nav-more{margin:0}
+.nav-more>summary{min-height:46px;padding:.85rem .8rem;font-weight:700;border-radius:10px}
+.nav-more>div{display:grid;gap:.35rem}
+@media(max-width:620px){.shell nav .nav-more{grid-column:1/-1}.nav-more>div{grid-template-columns:repeat(2,minmax(0,1fr))}.nav-more>summary{text-align:center}}
+
 @media (min-width:761px) and (max-width:1050px){
   .home-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
   .home-metrics .card:last-child{grid-column:1/-1}

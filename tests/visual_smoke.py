@@ -1,6 +1,7 @@
 """Browser smoke tests against the actual local Nagora Salud server."""
 import asyncio
 import os
+import json
 from pathlib import Path
 from playwright.async_api import async_playwright
 
@@ -8,10 +9,17 @@ BASE = os.getenv("NAGORA_TEST_URL", "http://127.0.0.1:8000")
 OUT = Path(os.getenv("NAGORA_SCREENSHOT_DIR", "artifacts/visual"))
 OUT.mkdir(parents=True, exist_ok=True)
 
+async def audit_accessibility(page, name):
+    if os.getenv('NAGORA_AXE_PATH'):
+        await page.evaluate(Path(os.environ['NAGORA_AXE_PATH']).read_text(encoding='utf-8'))
+        audit = await page.evaluate("async () => await axe.run(document, {runOnly: {type:'tag', values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}})")
+        (OUT / f'accessibility-{name}.json').write_text(json.dumps(audit, ensure_ascii=False), encoding='utf-8')
+        assert not audit['violations'], [(v['id'], v['help']) for v in audit['violations']]
+
 async def main():
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
-        for width, height in [(360, 800), (390, 844), (768, 1024), (1366, 900)]:
+        for width, height in [(320, 800), (360, 800), (375, 812), (390, 844), (768, 1024), (1280, 900), (1366, 900)]:
             page = await browser.new_page(viewport={"width": width, "height": height}, device_scale_factor=1)
             errors = []
             page.on("pageerror", lambda err: errors.append(str(err)))
@@ -36,6 +44,16 @@ async def main():
             assert metrics["kpiAmountsFit"], f"Financial amounts wrap or overflow at {width}: {metrics}"
             assert not errors, f"JavaScript errors at {width}: {errors}"
             print(f"PASS {width}px: {metrics}")
+            await audit_accessibility(page, f'home-{width}')
+            for section in ('Ingresos', 'Gastos'):
+                await page.locator(f'[data-action="page:{section}"]').first.click()
+                await page.screenshot(path=str(OUT / f'{section.lower()}-{width}.png'), full_page=True)
+                assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), f'{section} overflows at {width}'
+                await audit_accessibility(page, f'{section.lower()}-{width}')
+            assert not errors, f'JavaScript errors after navigation at {width}: {errors}'
+            await page.locator('.nav-more > summary').click()
+            for section in ('Pendientes','Convenios','Resultado','Calendario','Perfil'):
+                assert await page.locator(f'.nav-more [data-action="page:{section}"]').is_visible()
             await page.close()
 
         # Functional smoke: persist an income and expense through the UI.
@@ -75,6 +93,8 @@ async def main():
         await invalid_form.locator('[name="amount"]').fill("0")
         await invalid_form.get_by_role("button", name="Guardar gasto").click()
         await invalid_form.locator('[role="alert"]').wait_for(timeout=10000)
+        assert await invalid_form.locator('[role="alert"]').evaluate('(el) => el === document.activeElement'), 'Error must receive keyboard focus'
+        await audit_accessibility(page, 'expense-error-390')
         invalid_state = await page.evaluate("async () => (await (await fetch('/api/state')).json()).records")
         assert len(invalid_state) == len(after), "Invalid amount unexpectedly persisted"
         assert not any(x["concept"] == "QA monto inválido" for x in invalid_state)

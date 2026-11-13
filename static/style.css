@@ -102,3 +102,17 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .income-kpi.coral,.coral{background:#FCEDE8}
 .brand svg path{fill:var(--brand-teal-dark)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Home — one primary action, three financial amounts, progressive detail. */
+.home-overview{max-width:920px}
+.home-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:16px 0}
+.home-metrics .card{display:flex;flex-direction:column;gap:8px;padding:24px;border-radius:16px}
+.home-metrics .card span{font-size:1rem;font-weight:700}
+.home-metrics .card strong{font-variant-numeric:tabular-nums;font-size:clamp(1.5rem,2.7vw,2.1rem);margin:0}
+.home-explainer{max-width:70ch;font-size:.94rem;color:var(--color-muted);line-height:1.55}
+.home-primary{margin:24px 0 32px}
+.home-primary .primary{min-height:48px;padding:12px 24px}
+.home-next{max-width:920px}
+.home-next p{line-height:1.5}
+.home-next details .toolbar{margin-bottom:0}
+@media(max-width:760px){.home-metrics{grid-template-columns:1fr;gap:8px}.home-metrics .card{padding:16px}.home-primary .primary{width:100%}}

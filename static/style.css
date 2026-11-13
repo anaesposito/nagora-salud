@@ -134,3 +134,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .home-overview>.home-metrics{gap:8px;margin:0 0 12px}
   .home-overview .home-primary{margin:16px 0 24px}
 }
+
+/* Tablet: keep monetary values readable instead of breaking digits across lines. */
+@media (min-width:761px) and (max-width:1050px){
+  .home-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .home-metrics .card:last-child{grid-column:1/-1}
+}
+.home-metrics .card strong{overflow-wrap:normal;white-space:nowrap}

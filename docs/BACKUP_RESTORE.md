@@ -23,11 +23,19 @@ restaura una base ficticia y comprueba centavos, sesiones y códigos. También s
 comprueba rechazo de sobrescritura y eliminación de una copia corrupta fallida.
 Esto no constituye un ensayo sobre infraestructura productiva.
 
-## Automatización y decisiones pendientes
+## Automatización horaria y retención
 
-El comando puede ejecutarse desde el programador del servidor con un nombre nuevo
-por ejecución. Todavía NO se configuró ningún cron ni almacenamiento externo.
-Antes de habilitar producción deben acordarse y probarse: frecuencia (RPO), tiempo
-de restauración (RTO), destino externo cifrado, retención y eliminación, responsables,
-alertas por fallos y revisión de ACL. No se eliminan respaldos automáticamente sin
-una política aprobada. Una copia en el mismo disco no protege ante pérdida del host.
+Product Owner eligió el 13/11/2026 respaldo cada hora y retención de 30 días.
+Ejecutor: `python backup_worker.py origen.sqlite directorio-protegido --loop`.
+Sin `--loop` ejecuta una vez y puede usarse con un programador horario externo.
+Tras generar una copia verificada elimina solo archivos propios con el patrón
+estricto generado por el ejecutor, mayores a 30 días. No recorre subdirectorios,
+no sigue enlaces y nunca elimina el origen. Si falla la copia, no rota respaldos
+y finaliza con código 1 para alertar al supervisor.
+
+Todavía NO se activó el proceso en un alojamiento ni se configuró almacenamiento
+externo. El RPO objetivo es una hora mientras el ejecutor opere correctamente;
+no es un RPO medido ni garantizado. Faltan RTO, destino externo cifrado,
+responsables, alertas por fallo/ausencia de copia y revisión de ACL. Una copia
+en el mismo disco no protege ante pérdida del host. El supervisor debe reiniciar
+el ejecutor y avisar ante fallos; no ocultar una cadena de fallos con reinicios.

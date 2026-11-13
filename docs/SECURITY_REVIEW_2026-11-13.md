@@ -17,6 +17,9 @@ Cambios propuestos en rama `fix/security-backup-audit-20261113`; sin despliegue.
 - Cierre explícito de conexión al inicializar SQLite y en pruebas (compatibilidad Windows).
 - Backup consistente, integridad, restauración en archivo nuevo y revocación de
   credenciales restauradas: ver [procedimiento](BACKUP_RESTORE.md).
+- Ejecutor horario con retención de 30 días, según decisión del Product Owner.
+  Dos pruebas adicionales de rotación selectiva y conservación ante fallo pasan.
+  Implementado y probado localmente; no activado en infraestructura.
 
 Pruebas locales Windows/Python 3.12: 15 tests de aplicación, seguridad, restauración
 y límites monetarios, todos satisfactorios. Con las tres pruebas del PR #33:

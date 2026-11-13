@@ -66,6 +66,21 @@ async def main():
         assert any(x["concept"] == "QA gasto navegador" and x["kind"] == "expense" for x in after)
         await page.screenshot(path=str(OUT / "expenses-after-create-390.png"), full_page=True)
         print("PASS income and expense persisted through UI")
+        # Reject invalid amounts without creating an extra movement.
+        await page.locator('[data-action="page:Inicio"]').first.click()
+        await page.locator(".home-next details summary").click()
+        await page.locator('[data-action="expense"]').first.click()
+        invalid_form = page.locator('dialog form[data-endpoint="movements"]')
+        await invalid_form.locator('[name="concept"]').fill("QA monto inválido")
+        await invalid_form.locator('[name="amount"]').fill("0")
+        await invalid_form.get_by_role("button", name="Guardar gasto").click()
+        await invalid_form.locator('[role="alert"]').wait_for(timeout=10000)
+        invalid_state = await page.evaluate("async () => (await (await fetch('/api/state')).json()).records")
+        assert len(invalid_state) == len(after), "Invalid amount unexpectedly persisted"
+        assert not any(x["concept"] == "QA monto inválido" for x in invalid_state)
+        await page.locator('[data-action="close"]').first.click()
+        print("PASS invalid zero amount rejected without persistence")
+
         await browser.close()
 
 if __name__ == "__main__":

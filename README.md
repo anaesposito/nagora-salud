@@ -4,8 +4,9 @@ Es momento de gestionar.
 ## Cómo ejecutarlo
 
 1. Descomprimí el ZIP y abrí una terminal dentro de la carpeta `nagora-salud`.
-2. Ejecutá `python server.py` con Python 3.11 o posterior y datos de zona horaria de IANA disponibles.
-3. Abrí http://127.0.0.1:8000 y elegí **Probar con datos de ejemplo** o **Crear cuenta**.
+2. Con Python 3.11 o posterior, ejecutá `python -m pip install -r requirements.txt`. Incluye los datos de zona horaria de Argentina que Windows no trae para Python.
+3. Ejecutá `python server.py`.
+4. Abrí http://127.0.0.1:8000 y elegí **Probar con datos de ejemplo** o **Crear cuenta**.
 
 La aplicación se ejecuta en loopback y crea `nagora.sqlite3` en el directorio de trabajo. Podés elegir el archivo con `NAGORA_DB` y el puerto con `NAGORA_PORT`. Para TLS local usá `NAGORA_CERT` y `NAGORA_KEY` y abrí la dirección HTTPS impresa por el servidor. `NAGORA_ORIGIN` permite indicar el origen exacto si configurás un acceso distinto. No requiere instalación de paquetes externos.
 

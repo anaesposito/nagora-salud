@@ -235,6 +235,7 @@ class App(BaseHTTPRequestHandler):
         return {'ok':True},None
 
 def make_server(database,host='127.0.0.1',port=8000,cert=None,key=None):
+    argentina_timezone()
     initialize(database)
     server=ThreadingHTTPServer((host,port),App)
     server.database=database

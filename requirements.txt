@@ -1,0 +1,2 @@
+# IANA data is required when the OS does not provide it (notably Windows).
+tzdata==2026.6

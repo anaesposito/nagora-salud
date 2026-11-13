@@ -5,15 +5,22 @@ import sqlite3
 from contextlib import closing
 from datetime import date, datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 ROOT = Path(__file__).resolve().parent
 SOURCES = ('Obra social', 'Prepaga', 'Particular', 'Otro')
 CATEGORIES = ('Alquiler', 'Servicios', 'Insumos', 'Matrícula profesional', 'Equipamiento', 'Impuestos', 'Software', 'Otros')
 ADJUSTMENTS = ('Descuento', 'Retención', 'Débito', 'Ajuste')
 
+def argentina_timezone():
+    try:
+        return ZoneInfo('America/Argentina/Buenos_Aires')
+    except ZoneInfoNotFoundError as error:
+        raise RuntimeError('Faltan los datos de zona horaria. Instalá las dependencias con: python -m pip install -r requirements.txt. Después reiniciá Nagora Salud.') from error
+
+
 def today():
-    return datetime.now(ZoneInfo('America/Argentina/Buenos_Aires')).date()
+    return datetime.now(argentina_timezone()).date()
 
 def connect(path):
     db = sqlite3.connect(path, timeout=10)

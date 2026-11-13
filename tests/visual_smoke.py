@@ -47,6 +47,7 @@ async def main():
         await form.locator('[name="amount"]').fill("12500")
         await form.get_by_role("button", name="Guardar ingreso").click()
         await page.get_by_text("QA ingreso navegador").first.wait_for(timeout=15000)
+        await page.locator('[data-action="page:Inicio"]').first.click()
         await page.locator('[data-action="expense"]').first.click()
         form = page.locator('dialog form[data-endpoint="movements"]')
         await form.locator('[name="concept"]').fill("QA gasto navegador")

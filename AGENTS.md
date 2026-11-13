@@ -2,6 +2,8 @@
 
 Antes de planificar, diseñar, programar, probar o revisar cualquier cambio, leer y cumplir [el Master de Producto, Diferenciación y Diseño](docs/NAGORA_SALUD_MASTER_PRODUCT_DESIGN.md). Es la fuente rectora del producto y prevalece sobre instrucciones ad hoc que no tengan aprobación explícita de Product Owner.
 
+Antes de cualquier trabajo de interfaz, consultar también [Master Design System](docs/NAGORA_SALUD_MASTER_DESIGN_SYSTEM.md). Sus patrones y criterios de aceptación son obligatorios para frontend y UX. No inventar tokens oficiales de marca aún no verificados.
+
 ## Reglas obligatorias
 - Producto financiero y de cartera administrativa para profesionales de salud argentinos de 30+ años con baja familiaridad digital. No desarrollar historias clínicas ni funciones clínicas.
 - UI mobile-first, liviana, intuitiva, lenguaje cotidiano y amable, una acción principal por pantalla, pocos datos visibles y detalles progresivos.

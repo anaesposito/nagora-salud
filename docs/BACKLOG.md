@@ -24,6 +24,15 @@ Backlog → Listo → En desarrollo → En QA → Terminado.
 ## Incidencias detectadas en pruebas de usuario
 - [#36 — P0 Recuperación de contraseña por email y mensajes claros de registro](https://github.com/anaesposito/nagora-salud/issues/36): el flujo actual exige un código previamente generado, no permite solicitarlo por correo y confunde errores de integridad con registros duplicados. Pendiente de implementación; vinculado con #13 y #2.
 
+## Seguridad y cumplimiento legal argentino — Bloqueante para usuarios reales
+- [#37 — EPIC P0 Seguridad, privacidad y cumplimiento legal argentino](https://github.com/anaesposito/nagora-salud/issues/37).
+- [#38 — P0 Seguridad de aplicación, autenticación y aislamiento](https://github.com/anaesposito/nagora-salud/issues/38).
+- [#39 — P0 Privacidad, Ley 25.326 y evaluación de obligaciones AAIP](https://github.com/anaesposito/nagora-salud/issues/39).
+- [#40 — P0 Backups, retención, incidentes y proveedores cloud](https://github.com/anaesposito/nagora-salud/issues/40).
+- [#41 — P1 Términos comerciales y alcance ARCA/regulatorio](https://github.com/anaesposito/nagora-salud/issues/41).
+
+**Gate de lanzamiento:** mantener la demo pública solo con datos ficticios. No habilitar cuentas reales ni información financiera real sin controles P0 verificados y revisión jurídica argentina. La verificación técnica no equivale a certificación legal.
+
 ## Orden sugerido de ejecución
 1. #2 QA visual y funcional; #3 navegación/Home.
 2. #11 CI; #12 accesibilidad.

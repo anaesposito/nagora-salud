@@ -33,6 +33,33 @@ async def main():
             assert not errors, f"JavaScript errors at {width}: {errors}"
             print(f"PASS {width}px: {metrics}")
             await page.close()
+
+        # Functional smoke: persist an income and expense through the UI.
+        page = await browser.new_page(viewport={"width": 390, "height": 844})
+        await page.goto(BASE, wait_until="networkidle")
+        await page.get_by_role("button", name="Entrar a la demo").click()
+        await page.locator(".home-overview").wait_for(timeout=15000)
+        before = await page.evaluate("async () => (await (await fetch('/api/state')).json()).records.length")
+        await page.locator('[data-action="income"]').first.click()
+        await page.locator('[data-action="source:2"]').click()
+        form = page.locator('dialog form[data-endpoint="movements"]')
+        await form.locator('[name="concept"]').fill("QA ingreso navegador")
+        await form.locator('[name="amount"]').fill("12500")
+        await form.get_by_role("button", name="Guardar ingreso").click()
+        await page.get_by_text("QA ingreso navegador").first.wait_for(timeout=15000)
+        await page.locator('[data-action="expense"]').first.click()
+        form = page.locator('dialog form[data-endpoint="movements"]')
+        await form.locator('[name="concept"]').fill("QA gasto navegador")
+        await form.locator('[name="amount"]').fill("2300")
+        await form.locator('[name="paid"]').check()
+        await form.get_by_role("button", name="Guardar gasto").click()
+        await page.get_by_text("QA gasto navegador").first.wait_for(timeout=15000)
+        after = await page.evaluate("async () => (await (await fetch('/api/state')).json()).records")
+        assert len(after) == before + 2, f"Expected two persisted movements, got {len(after) - before}"
+        assert any(x["concept"] == "QA ingreso navegador" and x["kind"] == "income" for x in after)
+        assert any(x["concept"] == "QA gasto navegador" and x["kind"] == "expense" for x in after)
+        await page.screenshot(path=str(OUT / "expenses-after-create-390.png"), full_page=True)
+        print("PASS income and expense persisted through UI")
         await browser.close()
 
 if __name__ == "__main__":

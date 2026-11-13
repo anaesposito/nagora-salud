@@ -3,7 +3,7 @@ import asyncio
 import os
 import json
 from pathlib import Path
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, expect
 
 BASE = os.getenv("NAGORA_TEST_URL", "http://127.0.0.1:8000")
 OUT = Path(os.getenv("NAGORA_SCREENSHOT_DIR", "artifacts/visual"))
@@ -92,8 +92,8 @@ async def main():
         await invalid_form.locator('[name="concept"]').fill("QA monto inválido")
         await invalid_form.locator('[name="amount"]').fill("0")
         await invalid_form.get_by_role("button", name="Guardar gasto").click()
-        await invalid_form.locator('[role="alert"]').wait_for(timeout=10000)
-        assert await invalid_form.locator('[role="alert"]').evaluate('(el) => el === document.activeElement'), 'Error must receive keyboard focus'
+        await expect(invalid_form.locator('[role="alert"]')).not_to_be_empty(timeout=10000)
+        await expect(invalid_form.locator('[role="alert"]')).to_be_focused(timeout=10000)
         await audit_accessibility(page, 'expense-error-390')
         invalid_state = await page.evaluate("async () => (await (await fetch('/api/state')).json()).records")
         assert len(invalid_state) == len(after), "Invalid amount unexpectedly persisted"

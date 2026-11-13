@@ -21,6 +21,9 @@ Backlog → Listo → En desarrollo → En QA → Terminado.
 5. Solo cerrar un Issue tras validar criterios de aceptación y obtener aprobación.
 6. No desplegar a producción sin aprobación explícita.
 
+## Incidencias detectadas en pruebas de usuario
+- [#36 — P0 Recuperación de contraseña por email y mensajes claros de registro](https://github.com/anaesposito/nagora-salud/issues/36): el flujo actual exige un código previamente generado, no permite solicitarlo por correo y confunde errores de integridad con registros duplicados. Pendiente de implementación; vinculado con #13 y #2.
+
 ## Orden sugerido de ejecución
 1. #2 QA visual y funcional; #3 navegación/Home.
 2. #11 CI; #12 accesibilidad.

@@ -69,3 +69,36 @@ svg{width:1.45rem;height:1.45rem;vertical-align:middle;flex:none}
 .income-actions button{min-height:54px}
 @media(max-width:1050px){.shell{grid-template-columns:180px minmax(0,1fr)}.income-top{grid-template-columns:1fr 1fr}.income-top>.primary{grid-column:1/-1;justify-self:start}.income-body{grid-template-columns:minmax(0,1fr)}.income-filters{grid-row:1;grid-template-columns:repeat(2,minmax(0,1fr))}.income-filters h2{grid-column:1/-1}}
 @media(max-width:620px){.shell>aside{padding:.65rem .8rem}.shell .brand{margin:0 0 .5rem;font-size:1rem}.brand svg{width:32px;height:29px}.shell nav button{justify-content:center;gap:.25rem;padding:.35rem;font-size:.74rem}.shell nav svg{width:1rem;height:1rem}.nav-count{display:none}.side-help{display:none}.shell main{padding:.7rem .8rem 1.5rem}.income-title>.symbol{width:44px;height:44px}.income-title>.symbol svg{width:25px;height:25px}.income-title p{font-size:.9rem}.account-bar{margin:0 0 .55rem}.income-top{gap:.55rem}.income-kpi{gap:.25rem;padding:.7rem;min-height:95px;border-radius:13px}.income-kpi>svg{width:20px;height:20px}.income-kpi span{font-size:.84rem}.income-kpi strong{font-size:1.2rem}.income-top>.primary{width:100%;min-height:49px}.income-line{grid-template-columns:auto minmax(0,1fr) auto}.income-line time{grid-column:2}.income-line .badge{grid-column:3;grid-row:2}.income-line .symbol{width:33px;height:33px}.income-line>strong{grid-column:3;grid-row:1}.income-dialog{width:100%;border-radius:0;padding:1rem}.source-picker .choices{grid-template-columns:repeat(2,minmax(0,1fr))}.source-picker button{min-height:60px}.form-grid{grid-template-columns:1fr}}
+
+/* Nagora Salud Design System v1.1 — brand alignment.
+   Brand values from Nagora_Guia_de_Marca; functional tokens are implementation choices. */
+:root {
+  --brand-teal-dark:#267B7E;
+  --brand-teal:#3A9898;
+  --brand-mint:#8ADCAE;
+  --brand-warm-white:#F8F7F2;
+  --brand-coral:#F08A78;
+  --color-text:#19383A;
+  --color-muted:#405A5B;
+  --color-border:#D5DFDA;
+  --color-surface:#FFFFFF;
+  --green:var(--brand-teal-dark);
+  --mint:#E5F7EC;
+  --border:var(--color-border);
+  --muted:var(--color-muted);
+  font-family:"Aptos","Inter",system-ui,sans-serif;
+  color:var(--color-text);
+  background:var(--brand-warm-white);
+}
+body{font-family:"Aptos","Inter",system-ui,sans-serif;color:var(--color-text);background:var(--brand-warm-white)}
+h1,h2,h3{font-family:"Aptos Display","Aptos","Inter",system-ui,sans-serif}
+.shell>aside{background:var(--brand-warm-white)}
+button.primary{background:var(--brand-teal-dark);border-color:var(--brand-teal-dark);color:#fff}
+button.primary:hover{background:#20686A;border-color:#20686A}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--color-text);outline-offset:3px}
+.card,.panel,.income-list{background:var(--color-surface);border-color:var(--color-border)}
+.income-filters{background:#EAF6F2}
+.income-kpi.mint,.mint{background:#E5F7EC}
+.income-kpi.coral,.coral{background:#FCEDE8}
+.brand svg path{fill:var(--brand-teal-dark)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}

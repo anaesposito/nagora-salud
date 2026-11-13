@@ -3,6 +3,7 @@ import os
 import tempfile
 import threading
 import unittest
+from contextlib import closing
 from http.client import HTTPConnection
 from pathlib import Path
 from uuid import uuid4
@@ -105,7 +106,7 @@ class NagoraTests(unittest.TestCase):
         self.client.call(base+'/void',dict(note='Carga errónea'))
         self.assertEqual(self.state()['records'][0]['state'],'Anulado')
         self.assertEqual(self.state()['totals']['received'],0)
-        with connect(self.path) as db:
+        with closing(connect(self.path)) as db:
             self.assertEqual(db.execute('SELECT COUNT(*) FROM audit').fetchone()[0],5)
 
     def test_recurring_expense_settlement_and_reminder(self):

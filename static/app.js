@@ -368,7 +368,7 @@ async function action(name) {
         field('Código de recuperación','code')+field('Nueva contraseña (12 caracteres o más)','password','','password'),'Cambiar contraseña');
       break;
     case 'recovery':
-      formDialog('Generar código de recuperación','recovery','<p>Guardá el código en un lugar seguro. Podés usarlo una sola vez para recuperar tu cuenta.</p>'+
+      formDialog('Generar código de recuperación','recovery','<p>Guardá el código en un lugar seguro. Dura 30 días y podés usarlo una sola vez. Al generar uno nuevo, el anterior deja de funcionar.</p>'+
         field('Contraseña actual','password','','password'),'Generar código');
       break;
     case 'demo': await api('demo',{}); await refresh(); break;
@@ -454,7 +454,7 @@ document.addEventListener('submit',async event=>{
   try {
     const result=await api(form.dataset.endpoint,data);
     if(form.dataset.endpoint==='recovery') {
-      openDialog('Tu código de recuperación',`<p>Copiá este código y guardalo en un lugar seguro.</p>${field('Código','recovery-code',result.code)}`);
+      openDialog('Tu código de recuperación',`<p>Copiá este código y guardalo en un lugar seguro. Dura 30 días y sirve una sola vez.</p>${field('Código','recovery-code',result.code)}`);
       const codeField=dialog.querySelector('input');
       codeField.readOnly=true;
       codeField.focus();

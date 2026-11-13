@@ -94,6 +94,32 @@ async def main():
         assert next(x for x in edited if x["id"] == expense["id"])["amount"] == 340000, "Expense edit not persisted"
         print("PASS expense amount edited and persisted")
 
+        # Register an unpaid income, then collect only part of its balance.
+        await page.locator('[data-action="page:Inicio"]').first.click()
+        await page.locator('[data-action="income"]').first.click()
+        await page.locator('[data-action="source:2"]').click()
+        unpaid_form = page.locator('dialog form[data-endpoint="movements"]')
+        await unpaid_form.locator('[name="concept"]').fill("QA cobro parcial")
+        await unpaid_form.locator('[name="amount"]').fill("10000")
+        await unpaid_form.locator('[name="paid"][value="off"]').check()
+        await unpaid_form.get_by_role("button", name="Guardar ingreso").click()
+        await page.get_by_text("QA cobro parcial").first.wait_for(timeout=15000)
+        unpaid = await page.evaluate("async () => (await (await fetch('/api/state')).json()).records")
+        income = next(x for x in unpaid if x["concept"] == "QA cobro parcial")
+        assert income["balance"] == 1000000, "New unpaid income must have full balance"
+        await page.locator('[data-action="page:Pendientes"]').first.click()
+        partial_entry = page.locator("article.entry").filter(has_text="QA cobro parcial")
+        await partial_entry.locator(f'[data-action="settle:{income["id"]}"]').click()
+        payment_form = page.locator(f'dialog form[data-endpoint="movements/{income["id"]}/settle"]')
+        await payment_form.locator('[name="amount"]').fill("4000")
+        await payment_form.locator('button.primary').click()
+        collected = await page.evaluate("async () => (await (await fetch('/api/state')).json()).records")
+        result = next(x for x in collected if x["id"] == income["id"])
+        assert result["balance"] == 600000, f"Expected remaining balance of $6,000, got {result['balance']}"
+        assert result["cash"] == 400000, f"Expected $4,000 collected, got {result['cash']}"
+        assert result["state"] == "Parcialmente cobrado", f"Unexpected collection state: {result['state']}"
+        print("PASS partial collection: 4000 paid, 6000 pending, correct status")
+
         await browser.close()
 
 if __name__ == "__main__":

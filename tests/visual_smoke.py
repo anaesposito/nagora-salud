@@ -86,7 +86,7 @@ async def main():
         expense = next(x for x in after if x["concept"] == "QA gasto navegador")
         expense_entry = page.locator("article.entry").filter(has_text="QA gasto navegador")
         await expense_entry.locator("summary").click()
-        await page.locator(f'[data-action="edit:{expense["id"]}]').first.click()
+        await page.locator(f'[data-action="edit:{expense["id"]}"]').first.click()
         edit_form = page.locator(f'dialog form[data-endpoint="movements/{expense["id"]}/edit"]')
         await edit_form.locator('[name="amount"]').fill("3400")
         await edit_form.get_by_role("button", name="Guardar cambios").click()

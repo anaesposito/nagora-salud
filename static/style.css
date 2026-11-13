@@ -116,3 +116,21 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .home-next p{line-height:1.5}
 .home-next details .toolbar{margin-bottom:0}
 @media(max-width:760px){.home-metrics{grid-template-columns:1fr;gap:8px}.home-metrics .card{padding:16px}.home-primary .primary{width:100%}}
+
+/* Home spacing regression guard: content follows natural document flow.
+   No full-height, space-between or stretched rows between greeting, month and KPIs. */
+.shell main:has(.home-overview){display:block;align-self:start}
+.shell main:has(.home-overview)>.head{margin-bottom:12px}
+.home-overview{display:block;height:auto;min-height:0}
+.home-overview>.toolbar{display:flex;justify-content:flex-start;align-items:end;margin:0 0 16px;min-height:0}
+.home-overview>.toolbar label{margin:0;max-width:260px;width:100%}
+.home-overview>.home-metrics{margin:0 0 12px;align-items:stretch}
+.home-overview .card{min-height:0}
+.home-overview .home-primary{margin:16px 0 24px}
+@media(max-width:620px){
+  .shell main:has(.home-overview)>.head{margin:0 0 12px}
+  .home-overview>.toolbar{margin:0 0 16px}
+  .home-overview>.toolbar label{max-width:none}
+  .home-overview>.home-metrics{gap:8px;margin:0 0 12px}
+  .home-overview .home-primary{margin:16px 0 24px}
+}

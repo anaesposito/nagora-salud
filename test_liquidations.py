@@ -119,6 +119,12 @@ class LiquidationTests(unittest.TestCase):
 
     def test_no_foreign_payer_no_void_no_expense(self):
         p=self.payload()
+        self.client.call('/api/payers',dict(kind='Obra social',name='Otro pagador',days=30))
+        payer=next(x['id'] for x in self.state()['payers'] if x['id']!=self.payer)
+        self.client.call('/api/liquidations',{**p,'payer':payer},400)
+        self.client.call('/api/movements',dict(kind='expense',source='Alquiler',concept='Consultorio',amount='200,02',day=self.when))
+        expense=next(x['id'] for x in self.state()['records'] if x['kind']=='expense')
+        self.client.call('/api/liquidations',{**p,'allocations':[p['allocations'][0],{**p['allocations'][1],'movement':expense}]},400)
         self.client.call(f'/api/movements/{self.ids[1]}/void',dict(note='Duplicado'))
         self.client.call('/api/liquidations',p,400)
         self.assertEqual(self.state()['liquidations'],[])
@@ -164,6 +170,22 @@ class LiquidationTests(unittest.TestCase):
         group=self.state()['liquidations'][0]
         cash=next(e for e in group['allocations'][0]['payments'] if e['component']=='cash')
         self.client.call(f'/api/movements/{self.ids[0]}/payments/{cash["id"]}/correct',dict(amount='90,01',day=self.when,version=0,note='Exceso sobre asignación'),400)
+
+    def test_payment_correction_cannot_exceed_group_allocation_with_remaining_balance(self):
+        self.client.call('/api/liquidations',self.payload())
+        before=self.state()
+        row=before['liquidations'][0]['allocations'][1]
+        cash=next(e for e in row['payments'] if e['component']=='cash')
+        endpoint=f'/api/movements/{self.ids[1]}/payments/{cash["id"]}/correct'
+        # The prestation permits 200.02, but this liquidation includes only 150.02.
+        self.client.call(endpoint,dict(amount='150,03',day=self.when,version=0,note='Un centavo de exceso'),400)
+        self.assertEqual(self.state()['totals'],before['totals'])
+        self.assertEqual(self.state()['liquidations'][0]['token'],before['liquidations'][0]['token'])
+        self.client.call(endpoint,dict(amount='150,02',day=self.when,version=0,note='Diferencia acreditada'))
+        after=self.state()
+        self.assertEqual(after['liquidations'][0]['allocations'][1]['difference'],0)
+        self.assertEqual(after['liquidations'][0]['allocations'][1]['pending_now'],5000)
+        self.assertEqual(after['totals']['received'],23003)
 
     def test_concurrent_replay_and_competing_balance(self):
         p=self.payload()

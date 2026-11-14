@@ -15,6 +15,26 @@ from urllib.parse import urlsplit, parse_qs
 from domain import *
 
 ASSETS = {'/':('index.html','text/html'),'/app.js':('app.js','text/javascript'),'/style.css':('style.css','text/css')}
+AUTH_WINDOW = 900
+RECOVERY_LIFETIME = 30 * 86400
+
+
+def allow_auth(database, address, email, now=None):
+    """Persist counters separately so rejected credentials cannot roll them back."""
+    now = int(time.time()) if now is None else now
+    buckets = [('ip:' + address, 100)]
+    if isinstance(email, str):
+        buckets.append(('account:' + email.strip().lower(), 20))
+    with closing(connect(database)) as db, db:
+        db.execute('BEGIN IMMEDIATE')
+        db.execute('DELETE FROM auth_attempt WHERE started<=?', (now - AUTH_WINDOW,))
+        allowed = True
+        for value, limit in buckets:
+            bucket = hashlib.sha256(value.encode()).hexdigest()
+            db.execute('INSERT INTO auth_attempt VALUES(?,?,1) ON CONFLICT(bucket) DO UPDATE SET attempts=attempts+1', (bucket, now))
+            if db.execute('SELECT attempts FROM auth_attempt WHERE bucket=?', (bucket,)).fetchone()[0] > limit:
+                allowed = False
+        return allowed
 
 def password(value, salt):
     return hashlib.scrypt(value.encode(), salt=bytes.fromhex(salt), n=32768, r=8, p=1, maxmem=64*1024*1024).hex()
@@ -33,6 +53,10 @@ def valid_password(value, stored):
     return hmac.compare_digest(password(value,salt),digest)
 
 class App(BaseHTTPRequestHandler):
+    def log_request(self, code='-', size='-'):
+        # Do not record query strings, account identifiers, cookies or bodies.
+        self.log_message('request %s %s', self.command, code)
+
     def respond(self, status, payload, mime='application/json', cookie=None):
         body = json.dumps(payload, ensure_ascii=False).encode() if mime=='application/json' else payload
         self.send_response(status)
@@ -80,6 +104,10 @@ class App(BaseHTTPRequestHandler):
                 data = json.loads(self.rfile.read(length))
                 if not isinstance(data,dict):
                     raise ValueError('Solicitud inválida.')
+                if path in ('/api/login', '/api/register', '/api/reset', '/api/recovery', '/api/demo'):
+                    if not allow_auth(self.server.database, self.client_address[0], data.get('email')):
+                        self.respond(429, {'error':'Hubo muchos intentos. Esperá 15 minutos y volvé a intentar.'})
+                        return
             with closing(connect(self.server.database)) as db, db:
                 if write or path=='/api/state':
                     db.execute('BEGIN IMMEDIATE')
@@ -108,7 +136,7 @@ class App(BaseHTTPRequestHandler):
             email=label(data.get('email'),254).lower()
             code=label(data.get('code'),64)
             new_secret=read_password(data.get('password'))
-            recovery=db.execute('SELECT a.id,r.digest FROM account a JOIN recovery r ON a.id=r.owner WHERE a.email=? AND a.demo=0',(email,)).fetchone()
+            recovery=db.execute('SELECT a.id,r.digest FROM account a JOIN recovery r ON a.id=r.owner WHERE a.email=? AND a.demo=0 AND r.expires>?',(email,int(time.time()))).fetchone()
             digest=hashlib.sha256(code.encode()).hexdigest()
             if not recovery or not hmac.compare_digest(digest,recovery['digest']):
                 raise ValueError('El correo o código de recuperación es incorrecto.')
@@ -161,8 +189,9 @@ class App(BaseHTTPRequestHandler):
             if account['demo'] or not valid_password(current,account['secret']):
                 raise ValueError('La contraseña es incorrecta.')
             code=secrets.token_urlsafe(24)
-            db.execute('INSERT OR REPLACE INTO recovery VALUES(?,?)',(owner,hashlib.sha256(code.encode()).hexdigest()))
-            return {'code':code},None
+            expires = int(time.time()) + RECOVERY_LIFETIME
+            db.execute('INSERT OR REPLACE INTO recovery(owner,digest,expires) VALUES(?,?,?)',(owner,hashlib.sha256(code.encode()).hexdigest(),expires))
+            return {'code':code,'expires':expires},None
         key = label(data.get('key'),80)
         if db.execute('SELECT 1 FROM request WHERE owner=? AND key=?',(owner,key)).fetchone():
             return {'ok':True},None

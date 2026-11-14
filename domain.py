@@ -2,6 +2,7 @@ import calendar
 import json
 import re
 import sqlite3
+from contextlib import closing
 from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -21,9 +22,11 @@ def connect(path):
     return db
 
 def initialize(path):
-    with connect(path) as db:
+    with closing(connect(path)) as db, db:
         db.execute('PRAGMA journal_mode=WAL')
         db.executescript((ROOT / 'migrations/001.sql').read_text())
+        if 'expires' not in {row[1] for row in db.execute('PRAGMA table_info(recovery)')}:
+            db.execute('ALTER TABLE recovery ADD COLUMN expires INTEGER NOT NULL DEFAULT 0')
 
 def money(value):
     value = str(value).strip()

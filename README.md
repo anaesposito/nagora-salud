@@ -44,3 +44,16 @@ La interfaz incorpora diseño adaptable, navegación mediante controles nativos,
 - La edición corrige el movimiento. Para corregir un pago ya asentado en esta versión se anula el movimiento completo y se registra de nuevo. No existe reversión individual de pagos ni deshacer inmediato.
 - El calendario admite vencimientos y recordatorios internos. Los impuestos se registran como gastos. No se calculan tributos ni se envían avisos externos. ARCA, bancos y billeteras quedan para una fase posterior.
 - El servidor incluido se entrega para ejecución local. Para operación comercial quedan pendientes infraestructura de producción, limitación de intentos, verificación de correo, políticas de retención, backups automáticos con restauración ensayada y revisión de seguridad. SQLite permite respaldo consistente con su API de backup. Un despliegue de mayor concurrencia puede migrar a PostgreSQL conservando el contrato de dominio.
+
+## Respaldo y entorno Windows
+
+En Windows, instalar `tzdata` en un entorno virtual si no hay base IANA disponible:
+`python -m pip install tzdata`. No reemplazar la zona argentina por la del equipo.
+
+La propuesta de endurecimiento agrega límites persistentes de acceso y recuperación
+con código de un uso que vence en 30 días. Los códigos previos sin vencimiento
+se invalidan al migrar; regenerarlos desde Perfil antes de depender de ellos.
+
+Ver [respaldo horario, retención de 30 días y restauración](docs/BACKUP_RESTORE.md).
+El ejecutor está implementado; falta activarlo en infraestructura con destino
+externo cifrado, alertas y ensayo de recuperación. No implica producción lista.

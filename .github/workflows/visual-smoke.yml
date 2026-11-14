@@ -32,6 +32,8 @@ jobs:
           exit 1
       - name: Browser smoke and screenshots
         run: python tests/visual_smoke.py
+      - name: Payment correction and reversal
+        run: python tests/payment_revision_browser.py
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4

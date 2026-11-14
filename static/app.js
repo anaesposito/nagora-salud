@@ -65,7 +65,7 @@ async function api(path, data) {
       auth();
       notify('Tu sesión venció. Volvé a ingresar.');
     }
-    throw new Error(result.error);
+    throw Object.assign(new Error(result.error),{status:response.status});
   }
   return result;
 }
@@ -89,6 +89,28 @@ function auth(register=false) {
     </form><div class="toolbar">${button(register?'login':'register',register?'Ya tengo cuenta':'Crear cuenta')}${button('demo','Probar con datos de ejemplo')}${register?'':button('reset','Recuperar contraseña')}</div>
     </section></main>`;
 }
+function paymentDetails(record) {
+  const {id,settlements,payment_history,void:cancelled} = record;
+  const active = settlements.filter(item=>item.reason==='Pago');
+  const adjustments = settlements.filter(item=>item.reason!=='Pago');
+  const rows = items => items.map(item=>`<li>${esc(item.reason)} · ${dateText(item.day)} · ${pesos(item.amount)}
+    ${!cancelled && item.reason==='Pago' ? button('correct-payment:'+id+':'+item.id,'Modificar cobro') : ''}</li>`).join('');
+  const history = new Map();
+  for (const event of payment_history) {
+    if (!history.has(event.payment)) history.set(event.payment,[]);
+    history.get(event.payment).push(event);
+  }
+  const changed = [...history.values()].filter(events=>events.length>1);
+  return `${active.length ? `<ul class="payment-list" aria-label="Cobros registrados">${rows(active)}</ul>` : ''}
+    ${adjustments.length ? `<ul class="payment-list" aria-label="Diferencias registradas">${rows(adjustments)}</ul>` : ''}
+    ${changed.length ? `<details class="payment-history"><summary>Historial de cambios en cobros</summary>
+      ${changed.map(events=>`<ol class="payment-list" aria-label="Cambios de un cobro">${events.map(event=>`<li>
+        <strong>${!event.version?'Cobro original':event.amount===null?'Cobro revertido':'Cobro corregido'}</strong>
+        ${event.amount===null?'':` · ${dateText(event.day)} · ${pesos(event.amount)}`}
+        ${event.note ? `<p>Motivo: ${esc(event.note)}</p><small>Cambio del ${dateText(event.created.slice(0,10))} (UTC)</small>` : ''}
+      </li>`).join('')}</ol>`).join('')}
+    </details>` : ''}`;
+}
 function entry(record, mode='') {
   const {id,kind,source,concept,day,due,payer_name,balance,amount,state:tag,void:cancelled,settlements} = record;
   const income = kind==='income';
@@ -96,7 +118,7 @@ function entry(record, mode='') {
     <div><strong>${pesos(mode==='pending'?balance:amount)}</strong> <span class="badge">${tag}</span></div></div>
     <details ${mode==='pending'?'open':''}><summary>Ver detalle y acciones</summary>
     <p>${balance && !cancelled?'Quedan '+pesos(balance)+(due?' · Fecha estimada '+dateText(due):''):''}</p>
-    ${settlements.map(item=>`<p>${esc(item.reason)} · ${dateText(item.day)} · ${pesos(item.amount)}</p>`).join('')}
+    ${income ? paymentDetails(record) : settlements.map(item=>`<p>${esc(item.reason)} · ${dateText(item.day)} · ${pesos(item.amount)}</p>`).join('')}
     ${!cancelled?`<div class="toolbar">
       ${balance?button('settle:'+id,income?'Registrar cobro':'Registrar pago',true):''}
       ${balance && income?button('adjust:'+id,'Registrar diferencia'):''}
@@ -168,7 +190,7 @@ function renderPage() {
   if (page==='Ingresos' || page==='Gastos') {
     const income = page==='Ingresos';
     const items = records.filter(r=>r.kind===(income?'income':'expense') &&
-      (r.day.startsWith(state.month) || r.settlements.some(s=>s.day.startsWith(state.month))) &&
+      (r.day.startsWith(state.month) || r.settlements.some(s=>s.day.startsWith(state.month)) || r.payment_history.some(s=>s.day?.startsWith(state.month))) &&
       (!income || ((!origin||r.source===origin)&&(!status||r.state===status))));
     if(income) return incomePage(items,pending,totals);
     return heading(income?'Ingresos y honorarios':'Mis gastos',income?'Registrá lo que ganaste y controlá lo que todavía te deben.':'Revisá lo que pagaste y lo que te falta pagar.',
@@ -358,8 +380,33 @@ function registerIncome(source='',draft={}) {
   dialog.querySelector('.choices [aria-pressed="true"], .choices button')?.focus();
   if(source) dialog.querySelector('.choices [aria-pressed="true"]')?.focus();
 }
+function paymentForm(record, payment, reverse) {
+  if (!payment || record.void) throw new Error('Volvé a abrir el detalle del cobro.');
+  const route = `movements/${record.id}/payments/${payment.id}/${reverse?'reverse':'correct'}`;
+  const explanation = reverse
+    ? 'Este importe volverá a quedar pendiente. El cobro original seguirá en el historial.'
+    : 'El nuevo importe y la fecha actualizarán tus totales. El cobro original seguirá en el historial.';
+  const fields = reverse ? '' : field('Monto en pesos','amount',amountInput(payment.amount)) +
+    field('Fecha del cobro','day',payment.day,'date');
+  const alternate = reverse ? 'correct-payment' : 'reverse-payment';
+  openDialog(reverse?'Revertir cobro':'Modificar cobro',`
+    <p>Cobro registrado: <strong>${pesos(payment.amount)}</strong> · ${dateText(payment.day)}</p>
+    <p>${explanation}</p>
+    <form data-endpoint="${route}" data-payment-version="${payment.version}" data-payment-movement="${record.id}">
+      ${fields}
+      <label>Motivo<textarea name="note" rows="2" maxlength="120" required aria-describedby="payment-note-help"></textarea></label>
+      <small id="payment-note-help">Indicá el motivo del cambio sin incluir datos de pacientes.</small>
+      <p class="error" role="alert" tabindex="-1"></p>
+      <button class="primary">${reverse?'Confirmar reversión':'Guardar corrección'}</button>
+    </form>
+    <div class="toolbar">${button('show:'+record.id,'Volver al detalle')}
+      ${button(alternate+':'+record.id+':'+payment.id,reverse?'Volver a modificar':'Revertir cobro')}</div>`);
+  if (reverse) dialog.querySelector('[name="note"]').focus();
+  else dialog.querySelector('[name="day"]').max=state.today;
+}
+
 async function action(name) {
-  const [command,arg]=name.split(':');
+  const [command,arg,paymentId]=name.split(':');
   const r=state?.records.find(m=>String(m.id)===arg);
   switch(command) {
     case 'login': case 'register': auth(command==='register'); break;
@@ -393,7 +440,10 @@ async function action(name) {
     }
     case 'expense': movementForm('expense'); break;
     case 'edit': movementForm(r.kind,r.source,r); break;
-    case 'show': openDialog('Detalle del movimiento',entry(r,'pending')); break;
+    case 'show': openDialog('Detalle del movimiento','<p class="payment-feedback" role="status"></p>'+entry(r,'pending')); break;
+    case 'correct-payment': case 'reverse-payment':
+      paymentForm(r,r.settlements.find(item=>String(item.id)===paymentId),command==='reverse-payment');
+      break;
     case 'settle': case 'adjust':
       formDialog(command==='adjust'?'Registrar diferencia':r.kind==='income'?'Registrar cobro':'Registrar pago',
         'movements/'+arg+'/settle',`<p>Quedan <strong>${pesos(r.balance)}</strong></p>
@@ -450,6 +500,15 @@ document.addEventListener('submit',async event=>{
   errorBox.textContent='';
   const data=Object.fromEntries(new FormData(form));
   for(const key of ['paid','recurrence','confirm_duplicate']) data[key]=data[key]==='on';
+  const paymentMovement = form.dataset.paymentMovement;
+  if (paymentMovement) {
+    data.version = Number(form.dataset.paymentVersion);
+    const payload = JSON.stringify(data);
+    if (form.dataset.payload !== payload) {
+      form.dataset.payload = payload;
+      form.dataset.key = crypto.randomUUID();
+    }
+  }
   data.key=form.dataset.key ||= crypto.randomUUID();
   try {
     const result=await api(form.dataset.endpoint,data);
@@ -468,6 +527,17 @@ document.addEventListener('submit',async event=>{
       notify('Contraseña actualizada. Ya podés ingresar.');
       return;
     }
+    if (paymentMovement) {
+      await refresh();
+      if (form.isConnected && dialog.open) {
+        await action('show:'+paymentMovement);
+        const history = dialog.querySelector('.payment-history');
+        if (history) history.open = true;
+        dialog.querySelector('.payment-feedback').textContent =
+          form.dataset.endpoint.endsWith('/reverse') ? 'Cobro revertido.' : 'Cobro corregido.';
+      }
+      return;
+    }
     if(dialog.open) dialog.close();
     const previous=state;
     if(form.dataset.endpoint==='movements') {
@@ -478,7 +548,13 @@ document.addEventListener('submit',async event=>{
     await refresh(month);
     document.querySelector('main').focus();
     if(previous) notify('Guardado. Tus registros están actualizados.');
-  } catch(error) { errorBox.textContent=error.message; }
+  } catch(error) {
+    errorBox.textContent=error.message;
+    if (paymentMovement) {
+      errorBox.focus();
+      if (error.status===409) await refresh().catch(()=>{});
+    }
+  }
   finally { submit.disabled=false; }
 });
 api('config').then(config=>{ demoOnly=config.demoOnly; }).catch(()=>{}).then(()=>refresh().catch(()=>auth()));

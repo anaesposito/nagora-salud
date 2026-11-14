@@ -28,7 +28,7 @@ class Client:
         if response.getheader('Set-Cookie'):
             self.cookie = response.getheader('Set-Cookie').split(';')[0]
         connection.close()
-        if response.status != expected:
+        if response.status not in (expected if isinstance(expected, tuple) else (expected,)):
             raise AssertionError((path,response.status,raw))
         return json.loads(raw) if 'application/json' in response.getheader('Content-Type') else raw
 

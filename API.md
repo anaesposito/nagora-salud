@@ -14,6 +14,8 @@ Todas las rutas están bajo `/api`. Las escrituras usan POST con JSON y deben in
 | POST /movements | kind (income o expense), source, concept, amount, day. Opcionales payer, due, reference, paid, paid_day, recurrence, confirm_duplicate |
 | POST /movements/{id}/edit | Campos editables del movimiento. Mantiene su historial de pagos |
 | POST /movements/{id}/settle | amount, day, reason (Pago, Descuento, Retención, Débito o Ajuste) |
+| POST /movements/{id}/payments/{payment}/correct | key, version, note, amount, day |
+| POST /movements/{id}/payments/{payment}/reverse | key, version, note |
 | POST /movements/{id}/void | note |
 | POST /movements/{id}/remind | day, note |
 | POST /reminders/{id} | Marca un recordatorio como completado |
@@ -21,3 +23,15 @@ Todas las rutas están bajo `/api`. Las escrituras usan POST con JSON y deben in
 | POST /profile | name |
 
 Las fechas usan AAAA-MM-DD. Las entradas monetarias son texto en formato argentino, por ejemplo `70.000,50`. Las salidas monetarias se expresan en centavos. Los errores incluyen un campo `error` con mensaje. Una sesión ausente devuelve 401, un origen no permitido 403 y un recurso inexistente o ajeno 404. Las validaciones devuelven 400.
+
+Los cobros de ingresos se corrigen por importe o fecha y se revierten de forma
+individual. `payment` es el ID del cobro activo en `settlements` y `version` su
+versión actual (0 para el original). `note` es un motivo administrativo obligatorio
+de hasta 120 caracteres. Evitá datos de pacientes. Una versión desactualizada, un
+cobro reversado, un movimiento anulado o una clave reutilizada con otro cambio
+devuelven 409. El reintento del cambio ya aplicado devuelve el mismo éxito.
+
+`settlements` contiene los pagos y ajustes vigentes. `payment_history` incluye
+los originales y sus revisiones en orden, incluyendo la reversión con `amount`
+y `day` nulos. La caja se recalcula en los meses de los cobros efectivos. Los
+honorarios devengados y los ajustes de liquidación conservan su propio cálculo.

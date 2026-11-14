@@ -16,6 +16,8 @@ Todas las rutas están bajo `/api`. Las escrituras usan POST con JSON y deben in
 | POST /movements/{id}/settle | amount, day, reason (Pago, Descuento, Retención, Débito o Ajuste) |
 | POST /movements/{id}/payments/{payment}/correct | key, version, note, amount, day |
 | POST /movements/{id}/payments/{payment}/reverse | key, version, note |
+| POST /liquidations | key, payer, reference, day, received, method, allocations |
+| POST /liquidations/{id}/correct | Los mismos campos más version, token, note |
 | POST /movements/{id}/void | note |
 | POST /movements/{id}/remind | day, note |
 | POST /reminders/{id} | Marca un recordatorio como completado |
@@ -35,3 +37,17 @@ devuelven 409. El reintento del cambio ya aplicado devuelve el mismo éxito.
 los originales y sus revisiones en orden, incluyendo la reversión con `amount`
 y `day` nulos. La caja se recalcula en los meses de los cobros efectivos. Los
 honorarios devengados y los ajustes de liquidación conservan su propio cálculo.
+
+`allocations` contiene de 1 a 30 objetos con `movement` entero; `allocated`,
+`cash`, `discount`, `retained`, `difference` como texto monetario (admite `"0"`);
+`discount_kind`, `retention_kind` y `note` cuando corresponden. `received` debe
+igualar la suma exacta de `cash`. `allocated` debe igualar los cuatro componentes
+y caber en el saldo disponible. La respuesta es `{id, version}`. El estado incluye
+`liquidations` con `token` para corregir, asignaciones efectivas e historial.
+Reintentos iguales devuelven la misma respuesta; claves/referencias repetidas con
+otra carga o huellas desactualizadas devuelven 409. Recursos de otra cuenta: 404.
+
+`totals.generated` y `totals.discounts` corresponden al mes consultado;
+`totals.retained` es el acumulado vigente de retenciones, separado de caja y
+resultado. Las retenciones ya no reducen `activity`. Las nuevas se registran sólo
+por Liquidaciones para exigir clasificación. Ver [reglas y ejemplos](docs/LIQUIDATIONS.md).

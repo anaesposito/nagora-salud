@@ -2,7 +2,7 @@ name: Visual smoke — Nagora Salud
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/issue-9-payment-corrections]
   workflow_dispatch:
 
 permissions:
@@ -34,6 +34,8 @@ jobs:
         run: python tests/visual_smoke.py
       - name: Payment correction and reversal
         run: python tests/payment_revision_browser.py
+      - name: Manual multi-prestation liquidations
+        run: python tests/liquidation_browser.py
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4

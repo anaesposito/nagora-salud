@@ -1,4 +1,13 @@
 # Nagora Salud
+
+## Liquidaciones manuales
+
+En Ingresos, **Liquidaciones de pagadores** permite asignar un documento a varias
+prestaciones existentes en tres pasos. Se distinguen dinero recibido, descuentos
+aceptados, retenciones clasificadas y diferencias pendientes. Las correcciones
+conservan versiones y son compatibles con los cobros individuales del PR #42.
+Las retenciones no son caja ni se restan automáticamente como pérdidas.
+Ver [reglas financieras, API y evidencia](docs/LIQUIDATIONS.md).
 Es momento de gestionar.
 
 ## Cómo ejecutarlo

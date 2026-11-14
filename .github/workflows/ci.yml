@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, feat/issue-9-payment-corrections]
   workflow_dispatch:
 
 permissions:
@@ -37,4 +37,4 @@ jobs:
         with:
           node-version: '22'
       - name: Check frontend JavaScript syntax
-        run: node --check static/app.js
+        run: node --check static/app.js && node --check static/liquidations.js

@@ -148,6 +148,7 @@ function incomePage(items,pending,totals) {
       ${button('income',icon('plus')+' Registrar ingreso',true)}
     </div>
     <div class="income-body"><section class="income-list">
+      <div class="toolbar">${button('liquidations','Liquidaciones de pagadores')}</div>
       <header class="row"><h2>${full?'Movimientos':'Últimos ingresos'}</h2>${!origin&&!status&&items.length>4?button('income-list',allIncome?'Ver últimos':'Ver todos →'):''}</header>
       ${(full?items:items.slice(0,4)).map(r=>`<button class="income-line" type="button" data-action="show:${r.id}">
         <span class="symbol">${icon(sourceIcons[sources.indexOf(r.source)]||'coins')}</span>
@@ -214,7 +215,7 @@ function renderPage() {
   if(page==='Resultado') return heading('Resultado de mi actividad','Dos formas de mirar el mes.') +
     `<div class="toolbar">${period()}</div><div class="cards">${card('Me queda según registros',totals.net,'mint')}${card('Resultado de mi actividad',totals.activity)}</div>
     <section class="panel"><h2>¿Cómo se calcula?</h2><details><summary>Me queda según registros</summary><p>Cobros recibidos menos gastos pagados. Puede diferir del saldo de tu cuenta y de lo que queda después de impuestos.</p></details>
-    <details><summary>Resultado de mi actividad</summary><p>Honorarios y gastos según la fecha registrada. Los descuentos, retenciones y otros ajustes se restan en el mes en que los registraste.</p></details>
+    <details><summary>Resultado de mi actividad</summary><p>Honorarios y gastos según la fecha registrada. Los descuentos aceptados y otros ajustes se restan en el mes registrado. Las retenciones no se restan como pérdida definitiva ni aumentan caja.</p><p>Honorarios generados en el mes: ${pesos(totals.generated)}. Descuentos y ajustes del mes: ${pesos(totals.discounts)}.</p><p>Retenciones registradas acumuladas: ${pesos(totals.retained)}. Revisá su clasificación en las liquidaciones; no se presumen recuperadas ni perdidas.</p></details>
     <h3>Impuestos pendientes</h3><p>${pesos(sum(records.filter(r=>r.kind==='expense'&&r.source==='Impuestos'&&!r.void),'balance'))} · Se restan de “Me queda” cuando los pagás.</p></section>`;
   if(page==='Calendario') return heading('Próximos compromisos','Cobros, vencimientos y recordatorios.') +
     `<section class="panel"><h2>Fechas para tener en cuenta</h2>${commitments().map(item=>`<article class="entry row"><span>${dateText(item.day)} · ${esc(item.text)}</span>${button(item.action,item.label)}</article>`).join('')||'No hay compromisos con fecha.'}</section>`;
@@ -409,6 +410,11 @@ async function action(name) {
   const [command,arg,paymentId]=name.split(':');
   const r=state?.records.find(m=>String(m.id)===arg);
   switch(command) {
+    case 'liquidations': liquidationList(); break;
+    case 'liquidation-new': startLiquidation(); break;
+    case 'liquidation-show': liquidationDetail(Number(arg)); break;
+    case 'liquidation-edit': startLiquidation(Number(arg)); break;
+    case 'liquidation-back': liquidationBack(Number(arg)); break;
     case 'login': case 'register': auth(command==='register'); break;
     case 'reset':
       formDialog('Recuperar contraseña','reset',field('Correo electrónico','email','','email')+
@@ -449,8 +455,8 @@ async function action(name) {
         'movements/'+arg+'/settle',`<p>Quedan <strong>${pesos(r.balance)}</strong></p>
         ${field('Monto en pesos','amount',command==='adjust'?'':amountInput(r.balance))}
         ${field('Fecha','day',state.today,'date')}
-        ${command==='adjust'?select('Motivo','reason',['Descuento','Retención','Débito','Ajuste']):'<input name="reason" type="hidden" value="Pago">'}
-        ${command==='adjust'?'<small>Si todavía esperás cobrar la diferencia, dejala pendiente y registrá solo lo que te pagaron.</small>':''}`);
+        ${command==='adjust'?select('Ajuste que aceptás descontar','reason',['Descuento','Débito','Ajuste']):'<input name="reason" type="hidden" value="Pago">'}
+        ${command==='adjust'?'<small>Si todavía esperás cobrar la diferencia, dejala pendiente. Las retenciones se registran y clasifican en Liquidaciones.</small>':''}`);
       break;
     case 'void': formDialog('Anular movimiento','movements/'+arg+'/void',`<p>Se quitará de los totales junto con sus pagos. Podés consultar el movimiento anulado después.</p>${field('Motivo','note')}`,'Confirmar anulación'); break;
     case 'remind': formDialog('Crear recordatorio','movements/'+arg+'/remind',field('¿Cuándo?','day',state.today,'date')+field('¿Qué querés recordar?','note',r.concept)); break;
@@ -492,6 +498,7 @@ document.addEventListener('change',async event=>{
 document.addEventListener('submit',async event=>{
   event.preventDefault();
   const form=event.target;
+  if (form.dataset.liquidationStep) { await submitLiquidation(form); return; }
   const submit=form.querySelector('button.primary');
   const errorBox=form.querySelector('.error');
   if(submit.disabled) return;

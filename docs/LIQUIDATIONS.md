@@ -35,7 +35,7 @@ Las retenciones históricas del registro anterior también dejan de restarse del
 
 ## Correcciones y PR #42
 
-Este PR se apila sobre `feat/issue-9-payment-corrections` (PR #42, `950a351`). No fusiona esa rama en main ni duplica su implementación. Revisados también #32 (cobro parcial), #33 (frontera HTTP), #34 (autenticación/backups) y #35 (zona horaria/UX). No se incorporan sus cambios aún abiertos. Si se integran primero, reconciliar `server.py`, `domain.py`, `static/app.js` y CI y repetir las pruebas.
+Este PR se apila sobre `feat/issue-9-payment-corrections` (PR #42, `936b624`). No fusiona esa rama en main ni duplica su implementación. Revisados también #32 (cobro parcial), #33 (frontera HTTP), #34 (autenticación/backups) y #35 (zona horaria/UX). No se incorporan sus cambios aún abiertos. Si se integran primero, reconciliar `server.py`, `domain.py`, `static/app.js` y CI y repetir las pruebas.
 
 - **Corregir liquidación** guarda una nueva versión completa con motivo obligatorio. Pagador y referencia conservan la identidad; asignaciones, clasificación, fecha y recibidos se pueden corregir. La confirmación explica que todos sus cobros pasan a la nueva fecha y se recalculan los meses afectados.
 - Las versiones y asignaciones anteriores permanecen inmutables. La vista `effective_settlement` cuenta sólo las entradas de la última versión del grupo, y sobre ellas aplica las revisiones individuales de #42. Cabecera no participa como segundo cobro.
@@ -56,7 +56,7 @@ No se solicitan datos clínicos, no se usan servicios externos ni IA, no hay reg
 
 ## Evidencia y límites
 
-- `python -m unittest -q`: 26 pruebas unitarias/integración locales, incluidas concurrencia real, pagos parciales, centavos, reintentos, cuentas ajenas, sesión vencida, rollback por fallo de auditoría, migración repetible, clasificación/liberación de retenciones y compatibilidad con #42.
+- `python -m unittest -q`: 27 pruebas unitarias/integración locales, incluidas concurrencia real, pagos parciales, centavos, reintentos, cuentas ajenas, sesión vencida, rollback por fallo de auditoría, migración repetible, clasificación/liberación de retenciones y compatibilidad con #42.
 - `node --check static/app.js` y `node --check static/liquidations.js`.
 - `python tests/run_liquidation_local.py`: servidor y SQLite temporales, Chromium real; pasos completos a 320/375/768/1280 px, validación sin perder datos, dos pestañas, corrección de cobro y recarga. Requiere Playwright 1.58.0 y Chromium; en Windows, tzdata.
 - Capturas ficticias en `artifacts/visual/liquidacion-*`; CI las adjunta en `nagora-visual-smoke`. Revisión visual local de escritorio y móvil realizada.

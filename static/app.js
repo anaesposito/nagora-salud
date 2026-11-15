@@ -549,7 +549,9 @@ document.addEventListener('submit',async event=>{
     document.querySelector('main').focus();
     if(previous) notify('Guardado. Tus registros están actualizados.');
   } catch(error) {
-    errorBox.textContent=error.message;
+    errorBox.textContent=paymentMovement && error instanceof TypeError
+      ? 'No pudimos confirmar el cambio por un problema de conexión. Tus datos siguen acá. Revisá la conexión e intentá otra vez.'
+      : error.message;
     if (paymentMovement) {
       errorBox.focus();
       if (error.status===409) await refresh().catch(()=>{});

@@ -26,6 +26,12 @@ async def verify_flow(browser, width, height):
     await page.get_by_role("button", name="Ingresos", exact=True).click()
     await page.locator(trigger).click()
     modal = page.get_by_role("dialog")
+    # Opening and cancelling a reversal must never mutate the ledger.
+    await modal.get_by_role("button", name="Modificar cobro").click()
+    await modal.get_by_role("button", name="Revertir cobro", exact=True).click()
+    await modal.get_by_label("Motivo").fill("Cancelado antes de confirmar")
+    await modal.get_by_role("button", name="Volver al detalle").click()
+    assert (await read_state(page)) == before
     await modal.get_by_role("button", name="Modificar cobro").click()
     await expect(modal.get_by_label("Monto en pesos")).to_have_value("300000,00")
     await modal.get_by_label("Monto en pesos").fill("299999,99")
@@ -33,6 +39,16 @@ async def verify_flow(browser, width, height):
     await expect(modal.get_by_label("Motivo")).to_be_focused()
     assert (await read_state(page))["totals"] == before["totals"]
     await modal.get_by_label("Motivo").fill("Importe mal registrado")
+    # A connection error preserves the draft and allows the same request to retry.
+    route = "**/api/movements/*/payments/*/correct"
+    await page.route(route, lambda request: request.abort("failed"))
+    await modal.get_by_role("button", name="Guardar corrección").click()
+    await expect(modal.get_by_role("alert")).to_be_focused()
+    await expect(modal.get_by_role("alert")).to_contain_text("Tus datos siguen acá")
+    await expect(modal.get_by_label("Monto en pesos")).to_have_value("299999,99")
+    await expect(modal.get_by_label("Motivo")).to_have_value("Importe mal registrado")
+    assert (await read_state(page))["totals"] == before["totals"]
+    await page.unroute(route)
     assert await modal.evaluate("(el) => el.scrollWidth <= el.clientWidth")
     await page.screenshot(path=OUT / f"issue-9-correccion-{width}.png")
     await modal.get_by_role("button", name="Guardar corrección").click()
@@ -44,7 +60,7 @@ async def verify_flow(browser, width, height):
     await modal.get_by_role("button", name="Revertir cobro").click()
     await expect(modal.get_by_label("Motivo")).to_be_focused()
     await modal.get_by_label("Motivo").fill("Cobro registrado por duplicado")
-    if width == 390:
+    if width == 375:
         await page.screenshot(path=OUT / f"issue-9-reversion-{width}.png")
     await modal.get_by_role("button", name="Confirmar reversión").click()
     await expect(modal.get_by_role("status")).to_have_text("Cobro revertido.")
@@ -66,14 +82,14 @@ async def verify_flow(browser, width, height):
     assert (await read_state(page))["totals"] == current["totals"]
     assert not errors, errors
     await page.close()
-    print(f"PASS {width}px: motivo obligatorio, centavos, corrección, reversión, historial y recarga")
+    print(f"PASS {width}px: cancelación, error de red recuperable, motivo, centavos, corrección, reversión, historial y recarga")
 
 
 async def main():
     OUT.mkdir(parents=True, exist_ok=True)
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(executable_path=os.getenv("NAGORA_TEST_CHROMIUM"))
-        for width, height in [(390,844),(1366,900)]:
+        for width, height in [(320,740),(375,812),(768,1024),(1280,900)]:
             await verify_flow(browser,width,height)
         await browser.close()
 

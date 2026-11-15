@@ -13,8 +13,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit, parse_qs
 
 from domain import *
+from liquidations import save_liquidation, list_liquidations
 
-ASSETS = {'/':('index.html','text/html'),'/app.js':('app.js','text/javascript'),'/style.css':('style.css','text/css')}
+ASSETS = {'/':('index.html','text/html'),'/app.js':('app.js','text/javascript'),'/liquidations.js':('liquidations.js','text/javascript'),'/style.css':('style.css','text/css')}
 
 def password(value, salt):
     return hashlib.scrypt(value.encode(), salt=bytes.fromhex(salt), n=32768, r=8, p=1, maxmem=64*1024*1024).hex()
@@ -157,6 +158,7 @@ class App(BaseHTTPRequestHandler):
             repeat_expenses(db,owner)
             records,totals=snapshot(db,owner,month)
             return dict(profile=dict(name=account['name'],demo=bool(account['demo'])),records=records,totals=totals,
+                        liquidations=list_liquidations(db,owner),
                         payers=[dict(r) for r in db.execute('SELECT * FROM payer WHERE owner=? ORDER BY name',(owner,))],
                         reminders=[dict(r) for r in db.execute('SELECT * FROM reminder WHERE owner=? AND done=0 ORDER BY day',(owner,))],
                         today=today().isoformat(),month=month),None
@@ -173,7 +175,12 @@ class App(BaseHTTPRequestHandler):
         if payment:
             revise_payment(db,owner,int(payment[1]),int(payment[2]),payment[3],data)
             return {'ok':True},None
+        liquidation = re.fullmatch(r'/api/liquidations/([0-9]{1,15})/correct',path)
+        if path=='/api/liquidations' or liquidation:
+            return save_liquidation(db,owner,data,int(liquidation[1]) if liquidation else None),None
         key = label(data.get('key'),80)
+        if db.execute('SELECT 1 FROM liquidation_revision WHERE owner=? AND key=?',(owner,key)).fetchone():
+            raise PaymentConflict('Esta solicitud ya se usó para una liquidación.')
         if db.execute('SELECT 1 FROM payment_revision WHERE owner=? AND key=?',(owner,key)).fetchone():
             raise PaymentConflict('Esta solicitud ya se usó para otro cambio.')
         if db.execute('SELECT 1 FROM request WHERE owner=? AND key=?',(owner,key)).fetchone():

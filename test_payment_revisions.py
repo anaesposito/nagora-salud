@@ -57,10 +57,10 @@ class PaymentRevisionTests(unittest.TestCase):
         feb = self.client.call('/api/state?month=2020-02')
         mar = self.client.call('/api/state?month=2020-03')
         self.assertEqual(feb['totals']['received'], 0)
-        self.assertEqual(mar['totals'], dict(received=9008, pending=100, spent=0, activity=-902, net=9008))
+        self.assertEqual(mar['totals'], dict(received=9008, pending=100, spent=0, activity=-902, net=9008,generated=0,discounts=902,retained=0))
         self.client.call(path+'/reverse', dict(version=1, note='Registro duplicado'))
         mar = self.client.call('/api/state?month=2020-03')
-        self.assertEqual(mar['totals'], dict(received=4007,pending=5101,spent=0,activity=-902,net=4007))
+        self.assertEqual(mar['totals'], dict(received=4007,pending=5101,spent=0,activity=-902,net=4007,generated=0,discounts=902,retained=0))
         record = mar['records'][0]
         self.assertEqual(record['state'], 'Parcialmente cobrado')
         self.assertFalse(record['void'])

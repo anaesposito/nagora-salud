@@ -76,6 +76,8 @@ def balance(db, record):
     return record['amount'] - settled, cash
 
 def settle(db, owner, record, amount, when, reason):
+    if reason=='Retención':
+        raise ValueError('Registrá la retención en Liquidaciones para indicar su clasificación sin tratarla como pérdida.')
     if record['void'] or amount <= 0 or amount > balance(db, record)[0]:
         raise ValueError('El importe supera lo que queda pendiente o el movimiento está anulado.')
     if when > today().isoformat():
@@ -119,6 +121,10 @@ def revise_payment(db, owner, movement, payment, action, data):
     if record['void'] or not current or current['version'] != version:
         raise PaymentConflict('Este cobro cambió o ya no está activo. Volvé a abrir el detalle.')
     if amount is not None:
+        from liquidations import payment_capacity
+        capacity = payment_capacity(db,owner,payment)
+        if capacity is not None and amount > capacity:
+            raise ValueError('El cobro supera el importe incluido en la liquidación. Corregí la liquidación completa.')
         if amount > balance(db,record)[0] + current['amount']:
             raise ValueError('El importe supera lo que podés cobrar por este movimiento.')
         if when > today().isoformat():
@@ -153,6 +159,8 @@ def save_movement(db, owner, data, ident=None):
     recurrence = int(kind == 'expense' and data.get('recurrence') is True)
     if before and (before['void'] or amount < before['amount'] - balance(db, before)[0]):
         raise ValueError('El monto no puede ser menor que los pagos y ajustes registrados.')
+    if before and payer != before['payer'] and db.execute('SELECT 1 FROM liquidation_allocation WHERE owner=? AND movement=?',(owner,ident)).fetchone():
+        raise ValueError('Una prestación incluida en liquidaciones conserva su pagador.')
     if before and (before['series'] or before['recurrence']) and when != before['day']:
         raise ValueError('La fecha de un gasto de la serie mensual se mantiene fija.')
     if not data.get('confirm_duplicate') or reference:
@@ -192,7 +200,7 @@ def repeat_expenses(db, owner):
             audit(db,owner,'recurrence',dict(movement=ident,series=row['id']))
 
 def snapshot(db, owner, month):
-    totals = dict(received=0,pending=0,spent=0,activity=0)
+    totals = dict(received=0,pending=0,spent=0,activity=0,generated=0,discounts=0,retained=0)
     records = []
     for raw in db.execute("""SELECT m.*, p.name AS payer_name FROM movement m LEFT JOIN payer p
         ON p.owner=m.owner AND p.id=m.payer WHERE m.owner=? ORDER BY day DESC,m.id DESC""",(owner,)):
@@ -216,14 +224,19 @@ def snapshot(db, owner, month):
             income = row['kind']=='income'
             if income:
                 totals['pending'] += row['balance']
+                totals['retained'] += sum(s['amount'] for s in row['settlements'] if s['reason']=='Retención')
+                if row['day'].startswith(month):
+                    totals['generated'] += row['amount']
             if row['day'].startswith(month):
                 totals['activity'] += row['amount'] if income else -row['amount']
             for entry in row['settlements']:
                 if entry['day'].startswith(month):
                     if entry['reason']=='Pago':
                         totals['received' if income else 'spent'] += entry['amount']
-                    else:
+                    elif entry['reason']!='Retención':
                         totals['activity'] -= entry['amount']
+                        if income:
+                            totals['discounts'] += entry['amount']
         records.append(row)
     totals['net'] = totals['received'] - totals['spent']
     return records, totals

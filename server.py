@@ -71,13 +71,17 @@ class App(BaseHTTPRequestHandler):
                 return
             data = {}
             if write:
-                if self.headers.get('Origin') != self.server.origin:
-                    self.respond(403,{'error':'La solicitud debe salir de Nagora Salud.'})
-                    return
                 length = int(self.headers.get('Content-Length','0'))
                 if self.headers.get_content_type()!='application/json' or not 0 < length <= 16384:
                     raise ValueError('La solicitud tiene un formato o tamaño inválido.')
-                data = json.loads(self.rfile.read(length))
+                # Consume only the bounded body before closing a rejected request:
+                # unread bytes can reset the socket and hide the 403 on Windows.
+                self.connection.settimeout(5)
+                raw = self.rfile.read(length)
+                if self.headers.get('Origin') != self.server.origin:
+                    self.respond(403,{'error':'La solicitud debe salir de Nagora Salud.'})
+                    return
+                data = json.loads(raw)
                 if not isinstance(data,dict):
                     raise ValueError('Solicitud inválida.')
             with closing(connect(self.server.database)) as db, db:
@@ -89,6 +93,8 @@ class App(BaseHTTPRequestHandler):
             self.respond(401,{'error':'Ingresá a tu cuenta para continuar.'})
         except LookupError as error:
             self.respond(404,{'error':str(error)})
+        except PaymentConflict as error:
+            self.respond(409,{'error':str(error)})
         except (ValueError, TypeError, sqlite3.IntegrityError) as error:
             message = 'Ya existe un registro con esos datos.' if isinstance(error,sqlite3.IntegrityError) else str(error)
             self.respond(400,{'error':message})
@@ -163,7 +169,13 @@ class App(BaseHTTPRequestHandler):
             code=secrets.token_urlsafe(24)
             db.execute('INSERT OR REPLACE INTO recovery VALUES(?,?)',(owner,hashlib.sha256(code.encode()).hexdigest()))
             return {'code':code},None
+        payment = re.fullmatch(r'/api/movements/([0-9]{1,15})/payments/([0-9]{1,15})/(correct|reverse)',path)
+        if payment:
+            revise_payment(db,owner,int(payment[1]),int(payment[2]),payment[3],data)
+            return {'ok':True},None
         key = label(data.get('key'),80)
+        if db.execute('SELECT 1 FROM payment_revision WHERE owner=? AND key=?',(owner,key)).fetchone():
+            raise PaymentConflict('Esta solicitud ya se usó para otro cambio.')
         if db.execute('SELECT 1 FROM request WHERE owner=? AND key=?',(owner,key)).fetchone():
             return {'ok':True},None
         db.execute('INSERT INTO request VALUES(?,?)',(owner,key))

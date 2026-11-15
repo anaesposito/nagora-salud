@@ -2,6 +2,7 @@ import calendar
 import json
 import re
 import sqlite3
+from contextlib import closing
 from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -18,12 +19,14 @@ def connect(path):
     db = sqlite3.connect(path, timeout=10)
     db.row_factory = sqlite3.Row
     db.execute('PRAGMA foreign_keys=ON')
+    db.execute('PRAGMA recursive_triggers=ON')
     return db
 
 def initialize(path):
-    with connect(path) as db:
+    with closing(connect(path)) as db, db:
         db.execute('PRAGMA journal_mode=WAL')
-        db.executescript((ROOT / 'migrations/001.sql').read_text())
+        for migration in sorted((ROOT / 'migrations').glob('*.sql')):
+            db.executescript(migration.read_text())
 
 def money(value):
     value = str(value).strip()
@@ -69,7 +72,7 @@ def get_movement(db, owner, ident):
 def balance(db, record):
     settled, cash = db.execute("""SELECT COALESCE(SUM(amount),0),
         COALESCE(SUM(CASE WHEN reason='Pago' THEN amount ELSE 0 END),0)
-        FROM settlement WHERE owner=? AND movement=?""", (record['owner'], record['id'])).fetchone()
+        FROM effective_settlement WHERE owner=? AND movement=?""", (record['owner'], record['id'])).fetchone()
     return record['amount'] - settled, cash
 
 def settle(db, owner, record, amount, when, reason):
@@ -77,9 +80,61 @@ def settle(db, owner, record, amount, when, reason):
         raise ValueError('El importe supera lo que queda pendiente o el movimiento está anulado.')
     if when > today().isoformat():
         raise ValueError('La fecha del pago o ajuste no puede ser futura.')
-    db.execute('INSERT INTO settlement(owner,movement,day,amount,reason) VALUES(?,?,?,?,?)',
-               (owner, record['id'], when, amount, reason))
-    audit(db, owner, 'settlement', dict(movement=record['id'], amount=amount, day=when, reason=reason))
+    payment = db.execute('INSERT INTO settlement(owner,movement,day,amount,reason) VALUES(?,?,?,?,?)',
+               (owner, record['id'], when, amount, reason)).lastrowid
+    audit(db, owner, 'settlement', dict(movement=record['id'], payment=payment, amount=amount, day=when, reason=reason))
+
+class PaymentConflict(ValueError):
+    pass
+
+
+def revise_payment(db, owner, movement, payment, action, data):
+    # The HTTP write transaction takes the SQLite write lock before any reads.
+    record = get_movement(db, owner, movement)
+    original = db.execute("""SELECT 1 FROM settlement
+        WHERE owner=? AND movement=? AND id=? AND reason='Pago'""", (owner,movement,payment)).fetchone()
+    if record['kind'] != 'income' or not original:
+        raise LookupError('No encontramos ese cobro.')
+
+    key = label(data.get('key'),80)
+    note = label(data.get('note'))
+    version = data.get('version')
+    if type(version) is not int or not 0 <= version < 2**53-1:
+        raise ValueError('Volvé a abrir el detalle del cobro.')
+    amount = when = None
+    if action == 'correct':
+        amount, when = money(data.get('amount')), day(data.get('day'))
+
+    replay = db.execute("""SELECT movement,payment,version,note,amount,day
+        FROM payment_revision WHERE owner=? AND key=?""", (owner,key)).fetchone()
+    if replay:
+        if tuple(replay) != (movement,payment,version+1,note,amount,when):
+            raise PaymentConflict('Esta solicitud ya se usó para otro cambio.')
+        return
+    if db.execute('SELECT 1 FROM request WHERE owner=? AND key=?',(owner,key)).fetchone():
+        raise PaymentConflict('Esta solicitud ya se usó para otro cambio.')
+
+    current = db.execute("""SELECT amount,day,version FROM effective_settlement
+        WHERE owner=? AND movement=? AND id=?""", (owner,movement,payment)).fetchone()
+    if record['void'] or not current or current['version'] != version:
+        raise PaymentConflict('Este cobro cambió o ya no está activo. Volvé a abrir el detalle.')
+    if amount is not None:
+        if amount > balance(db,record)[0] + current['amount']:
+            raise ValueError('El importe supera lo que podés cobrar por este movimiento.')
+        if when > today().isoformat():
+            raise ValueError('La fecha del cobro no puede ser futura.')
+        if (amount,when) == (current['amount'],current['day']):
+            raise ValueError('Cambiá el importe o la fecha antes de guardar.')
+
+    db.execute('INSERT INTO request VALUES(?,?)', (owner,key))
+    db.execute("""INSERT INTO payment_revision(owner,movement,payment,version,key,note,amount,day)
+        VALUES(?,?,?,?,?,?,?,?)""", (owner,movement,payment,version+1,key,note,amount,when))
+    audit(db,owner,'payment_'+action,dict(
+        movement=movement,payment=payment,version=version+1,note=note,
+        before=dict(amount=current['amount'],day=current['day']),
+        after=dict(amount=amount,day=when) if amount is not None else None,
+    ))
+
 
 def save_movement(db, owner, data, ident=None):
     before = get_movement(db, owner, ident) if ident else None
@@ -143,7 +198,14 @@ def snapshot(db, owner, month):
         ON p.owner=m.owner AND p.id=m.payer WHERE m.owner=? ORDER BY day DESC,m.id DESC""",(owner,)):
         row = dict(raw)
         row['settlements'] = [dict(s) for s in db.execute(
-            'SELECT day,amount,reason FROM settlement WHERE owner=? AND movement=? ORDER BY day,id',(owner,row['id']))]
+            'SELECT id,day,amount,reason,version FROM effective_settlement WHERE owner=? AND movement=? ORDER BY day,id',
+            (owner,row['id']))]
+        row['payment_history'] = [dict(event) for event in db.execute("""
+            SELECT s.id AS payment,s.amount,s.day,0 AS version,NULL AS note,NULL AS created
+            FROM settlement s WHERE s.owner=? AND s.movement=? AND s.reason='Pago'
+            UNION ALL
+            SELECT payment,amount,day,version,note,created FROM payment_revision
+            WHERE owner=? AND movement=? ORDER BY payment,version""", (owner,row['id'],owner,row['id']))] if row['kind']=='income' else []
         row['balance'], row['cash'] = balance(db,row)
         if row['void']:
             row['state'] = 'Anulado'

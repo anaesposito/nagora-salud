@@ -72,13 +72,17 @@ class App(BaseHTTPRequestHandler):
                 return
             data = {}
             if write:
-                if self.headers.get('Origin') != self.server.origin:
-                    self.respond(403,{'error':'La solicitud debe salir de Nagora Salud.'})
-                    return
                 length = int(self.headers.get('Content-Length','0'))
                 if self.headers.get_content_type()!='application/json' or not 0 < length <= 16384:
                     raise ValueError('La solicitud tiene un formato o tamaño inválido.')
-                data = json.loads(self.rfile.read(length))
+                # Consume only the bounded body before closing a rejected request:
+                # unread bytes can reset the socket and hide the 403 on Windows.
+                self.connection.settimeout(5)
+                raw = self.rfile.read(length)
+                if self.headers.get('Origin') != self.server.origin:
+                    self.respond(403,{'error':'La solicitud debe salir de Nagora Salud.'})
+                    return
+                data = json.loads(raw)
                 if not isinstance(data,dict):
                     raise ValueError('Solicitud inválida.')
             with closing(connect(self.server.database)) as db, db:
